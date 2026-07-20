@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 6
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 6.0.x
+
+      - name: Build self-contained executable
+        shell: pwsh
+        run: |
+          dotnet publish .\QuotaLens.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:PublishTrimmed=false `
+            -p:DebugType=None `
+            -p:DebugSymbols=false `
+            -o .\dist\app
+
+      - name: Package and hash
+        shell: pwsh
+        run: |
+          $archive = "QuotaLens-${{ github.ref_name }}-win-x64.zip"
+          Compress-Archive -Path .\dist\app\QuotaLens.exe -DestinationPath ".\$archive"
+          $hash = (Get-FileHash ".\$archive" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $archive" | Set-Content -Encoding ascii .\SHA256SUMS.txt
+
+      - name: Create GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" `
+            "QuotaLens-${{ github.ref_name }}-win-x64.zip" `
+            ".\SHA256SUMS.txt" `
+            --generate-notes `
+            --title "Quota Lens ${{ github.ref_name }}"

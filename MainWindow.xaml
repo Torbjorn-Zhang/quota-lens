@@ -1,0 +1,279 @@
+<Window x:Class="QuotaLens.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Quota Lens" Width="420" Height="420"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ResizeMode="NoResize" ShowInTaskbar="False"
+        Foreground="{StaticResource TextBrush}"
+        FontFamily="Segoe UI, Microsoft YaHei UI"
+        MouseEnter="Window_MouseEnter" MouseLeave="Window_MouseLeave">
+    <Window.Resources>
+        <LinearGradientBrush x:Key="GlassBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.74">
+            <GradientStop Color="#F20C1222" Offset="0" />
+            <GradientStop Color="#E4141B2E" Offset="0.55" />
+            <GradientStop Color="#F00A1020" Offset="1" />
+        </LinearGradientBrush>
+
+        <Style x:Key="GadgetButton" TargetType="Button">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="4,0,0,0" />
+            <Setter Property="Background" Value="#14FFFFFF" />
+            <Setter Property="BorderBrush" Value="#20FFFFFF" />
+            <Setter Property="Foreground" Value="#CDE0EDFF" />
+            <Setter Property="FontFamily" Value="Segoe UI Symbol" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                                CornerRadius="10">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#2EFFFFFF" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Opacity" Value="0.65" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Chrome" Property="Opacity" Value="0.35" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ProviderCard" TargetType="Border">
+            <Setter Property="Background" Value="#16FFFFFF" />
+            <Setter Property="BorderBrush" Value="#24FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Padding" Value="14" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+        </Style>
+
+        <Style x:Key="MutedText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#9DB2C8E4" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+
+        <Style x:Key="QuotaValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#F3F7FF" />
+        </Style>
+
+        <Style x:Key="GlassProgress" TargetType="ProgressBar">
+            <Setter Property="Height" Value="5" />
+            <Setter Property="Minimum" Value="0" />
+            <Setter Property="Maximum" Value="100" />
+            <Setter Property="Background" Value="#1FFFFFFF" />
+            <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Grid>
+                            <Border Background="{TemplateBinding Background}" CornerRadius="2.5" />
+                            <Grid x:Name="PART_Track" ClipToBounds="True">
+                                <Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}"
+                                        HorizontalAlignment="Left" CornerRadius="2.5" />
+                            </Grid>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Border x:Name="GlassFrame" Background="{StaticResource GlassBrush}"
+                BorderBrush="#38FFFFFF" BorderThickness="1" CornerRadius="24">
+            <Border.Effect>
+                <DropShadowEffect Color="#000000" BlurRadius="28" ShadowDepth="7" Opacity="0.55" />
+            </Border.Effect>
+
+            <Grid Margin="16,12,16,13">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="42" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="22" />
+                </Grid.RowDefinitions>
+
+                <Grid x:Name="WidgetHeader" MouseLeftButtonDown="WidgetHeader_MouseLeftButtonDown">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Width="29" Height="29" CornerRadius="10" Margin="0,0,10,0">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#807C8CFF" Offset="0" />
+                                <GradientStop Color="#7038D6A3" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <TextBlock Text="Q" FontWeight="SemiBold" FontSize="13"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="QUOTA LENS" FontSize="11" FontWeight="SemiBold" Foreground="#E8F2FF" />
+                        <TextBlock x:Name="UpdatedText" Text="正在获取额度" Style="{StaticResource MutedText}" Margin="0,2,0,0" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <Button x:Name="RefreshButton" Style="{StaticResource GadgetButton}" Content="↻"
+                                ToolTip="立即刷新" Click="RefreshButton_Click" />
+                        <Button x:Name="PinButton" Style="{StaticResource GadgetButton}" Content="◇"
+                                ToolTip="置顶" Click="PinButton_Click" />
+                        <Button x:Name="ScreenOffButton" Style="{StaticResource GadgetButton}" Content="☾"
+                                ToolTip="息屏并无限期保持电脑运行" Click="ScreenOffButton_Click" />
+                        <Button Style="{StaticResource GadgetButton}" Content="×"
+                                ToolTip="隐藏到托盘" Click="CloseButton_Click" />
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Grid.Row="1">
+                    <Border Style="{StaticResource ProviderCard}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="34" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="28" Height="28" CornerRadius="9" Background="#2FE8ECFF" Margin="0,0,9,0">
+                                    <TextBlock Text="C" FontSize="13" FontWeight="SemiBold" Foreground="#F0F4FF"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Codex" FontSize="14" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="CodexPlanText" Text="正在连接" Style="{StaticResource MutedText}" />
+                                </StackPanel>
+                                <Ellipse x:Name="CodexStatusDot" Grid.Column="2" Width="7" Height="7"
+                                         Fill="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+                            </Grid>
+
+                            <Grid x:Name="CodexContentPanel" Grid.Row="1" Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="18" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel>
+                                    <Grid>
+                                        <TextBlock x:Name="CodexPrimaryName" Text="5 小时" Style="{StaticResource MutedText}" />
+                                        <TextBlock x:Name="CodexPrimaryValue" Text="—" Style="{StaticResource QuotaValue}"
+                                                   HorizontalAlignment="Right" />
+                                    </Grid>
+                                    <ProgressBar x:Name="CodexPrimaryBar" Style="{StaticResource GlassProgress}" Margin="0,5,0,4" />
+                                    <TextBlock x:Name="CodexPrimaryReset" Text="等待刷新" Style="{StaticResource MutedText}" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <Grid>
+                                        <TextBlock x:Name="CodexSecondaryName" Text="7 天" Style="{StaticResource MutedText}" />
+                                        <TextBlock x:Name="CodexSecondaryValue" Text="—" Style="{StaticResource QuotaValue}"
+                                                   HorizontalAlignment="Right" />
+                                    </Grid>
+                                    <ProgressBar x:Name="CodexSecondaryBar" Style="{StaticResource GlassProgress}" Margin="0,5,0,4" />
+                                    <TextBlock x:Name="CodexSecondaryReset" Text="等待刷新" Style="{StaticResource MutedText}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock x:Name="CodexErrorText" Grid.Row="1" Visibility="Collapsed" TextWrapping="Wrap"
+                                       Foreground="#FFFF8E9A" FontSize="11" Margin="0,7,0,0" />
+                            <TextBlock x:Name="CodexExtraText" Grid.Row="2" Visibility="Collapsed"
+                                       Style="{StaticResource MutedText}" Margin="0,6,0,0" TextWrapping="Wrap" />
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource ProviderCard}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="34" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="28" Height="28" CornerRadius="9" Background="#35E9D8C6" Margin="0,0,9,0">
+                                    <TextBlock Text="A" FontSize="13" FontWeight="SemiBold" Foreground="#FFF1E6DA"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Claude Code" FontSize="14" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="ClaudePlanText" Text="正在连接" Style="{StaticResource MutedText}" />
+                                </StackPanel>
+                                <Ellipse x:Name="ClaudeStatusDot" Grid.Column="2" Width="7" Height="7"
+                                         Fill="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+                            </Grid>
+
+                            <Grid x:Name="ClaudeContentPanel" Grid.Row="1" Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="18" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel>
+                                    <Grid>
+                                        <TextBlock x:Name="ClaudePrimaryName" Text="5 小时" Style="{StaticResource MutedText}" />
+                                        <TextBlock x:Name="ClaudePrimaryValue" Text="—" Style="{StaticResource QuotaValue}"
+                                                   HorizontalAlignment="Right" />
+                                    </Grid>
+                                    <ProgressBar x:Name="ClaudePrimaryBar" Style="{StaticResource GlassProgress}" Margin="0,5,0,4" />
+                                    <TextBlock x:Name="ClaudePrimaryReset" Text="等待刷新" Style="{StaticResource MutedText}" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <Grid>
+                                        <TextBlock x:Name="ClaudeSecondaryName" Text="7 天" Style="{StaticResource MutedText}" />
+                                        <TextBlock x:Name="ClaudeSecondaryValue" Text="—" Style="{StaticResource QuotaValue}"
+                                                   HorizontalAlignment="Right" />
+                                    </Grid>
+                                    <ProgressBar x:Name="ClaudeSecondaryBar" Style="{StaticResource GlassProgress}" Margin="0,5,0,4" />
+                                    <TextBlock x:Name="ClaudeSecondaryReset" Text="等待刷新" Style="{StaticResource MutedText}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock x:Name="ClaudeErrorText" Grid.Row="1" Visibility="Collapsed" TextWrapping="Wrap"
+                                       Foreground="#FFFF8E9A" FontSize="11" Margin="0,7,0,0" />
+                            <TextBlock x:Name="ClaudeExtraText" Grid.Row="2" Visibility="Collapsed"
+                                       Style="{StaticResource MutedText}" Margin="0,6,0,0" TextWrapping="Wrap" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <Grid Grid.Row="2">
+                    <TextBlock Text="Codex 60秒 · Claude 3分钟" Style="{StaticResource MutedText}" VerticalAlignment="Center" />
+                    <TextBlock Text="拖动顶部移动" Style="{StaticResource MutedText}"
+                               HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    <CheckBox x:Name="StartWithWindowsCheckBox" Visibility="Collapsed"
+                              Checked="StartWithWindows_Changed" Unchecked="StartWithWindows_Changed" />
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

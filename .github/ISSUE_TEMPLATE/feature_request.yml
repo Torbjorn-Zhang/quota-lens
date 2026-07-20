@@ -1,0 +1,25 @@
+name: Feature request / 功能建议
+description: Suggest an improvement / 提出改进建议
+title: "[Feature] "
+labels: ["type: enhancement"]
+body:
+  - type: textarea
+    attributes:
+      label: Problem / 问题
+      description: What user problem should this solve? / 希望解决什么用户问题？
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Proposed solution / 建议方案
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Alternatives / 替代方案
+  - type: checkboxes
+    attributes:
+      label: Security / 安全
+      options:
+        - label: This proposal does not require storing or exposing tokens. / 本建议不要求保存或暴露 token。
+          required: true

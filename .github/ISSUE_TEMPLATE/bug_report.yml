@@ -1,0 +1,51 @@
+name: Bug report / 错误报告
+description: Report a reproducible problem / 报告可复现的问题
+title: "[Bug] "
+labels: ["type: bug"]
+body:
+  - type: checkboxes
+    attributes:
+      label: Checklist / 检查
+      options:
+        - label: I searched existing issues. / 我已搜索现有 Issue。
+          required: true
+        - label: I removed all tokens and account identifiers. / 我已删除所有 token 和账号标识。
+          required: true
+  - type: input
+    attributes:
+      label: Quota Lens version / 版本
+      placeholder: v0.3.3
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Windows version / Windows 版本
+      placeholder: Windows 11 24H2
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Provider / 服务
+      options:
+        - Codex
+        - Claude Code
+        - Both / 两者
+        - Widget or Windows integration / 小组件或 Windows 集成
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: What happened? / 问题描述
+      description: Include expected and actual behavior. / 请说明预期与实际行为。
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Steps to reproduce / 复现步骤
+      placeholder: "1. ...\n2. ...\n3. ..."
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Sanitized details / 脱敏信息
+      description: Never paste tokens, auth files, or credential caches. / 禁止粘贴 token、登录文件或凭据缓存。
