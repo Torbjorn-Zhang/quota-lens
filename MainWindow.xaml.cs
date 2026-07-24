@@ -217,6 +217,14 @@ public partial class MainWindow : Window
                 ClaudeSecondaryValue,
                 ClaudeSecondaryBar,
                 ClaudeSecondaryReset);
+            RenderWindow(
+                _snapshot.Claude.IsAvailable
+                    ? _snapshot.Claude.Windows.ElementAtOrDefault(2)
+                    : null,
+                ClaudeScopedName,
+                ClaudeScopedValue,
+                ClaudeScopedBar,
+                ClaudeScopedReset);
 
             UpdatedText.Text = $"更新 {_snapshot.FetchedAt:HH:mm:ss} · {_settings.PollSeconds}s";
             UpdateTrayText();
@@ -314,7 +322,7 @@ public partial class MainWindow : Window
         foreach (var text in new[]
                  {
                      CodexPrimaryReset, CodexSecondaryReset,
-                     ClaudePrimaryReset, ClaudeSecondaryReset
+                     ClaudePrimaryReset, ClaudeSecondaryReset, ClaudeScopedReset
                  })
         {
             if (text.Tag is QuotaWindow window)

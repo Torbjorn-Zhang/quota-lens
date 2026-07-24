@@ -68,6 +68,54 @@ Run("Claude parser", () =>
     Contains("额外用量 23.5 / 100", quota.ExtraInfo);
 });
 
+Run("Claude Fable scoped quota parser", () =>
+{
+    using var json = JsonDocument.Parse(@"{
+      ""five_hour"": {
+        ""utilization"": 18,
+        ""resets_at"": ""2026-07-23T15:00:00+00:00""
+      },
+      ""seven_day"": {
+        ""utilization"": 41,
+        ""resets_at"": ""2026-07-27T15:00:00+00:00""
+      },
+      ""limits"": [
+        {
+          ""kind"": ""weekly_scoped"",
+          ""percent"": 72,
+          ""resets_at"": ""2026-07-27T15:00:00+00:00"",
+          ""scope"": {
+            ""model"": {
+              ""id"": ""claude-opus-4-8"",
+              ""display_name"": ""Opus""
+            }
+          },
+          ""is_active"": true
+        },
+        {
+          ""kind"": ""weekly_scoped"",
+          ""utilization"": 54,
+          ""resets_at"": ""2026-07-28T16:30:00+00:00"",
+          ""scope"": {
+            ""model"": {
+              ""id"": ""claude-fable-5"",
+              ""display_name"": ""Fable""
+            }
+          },
+          ""is_active"": false
+        }
+      ]
+    }");
+
+    var quota = QuotaService.ParseClaude(json.RootElement);
+    Equal(3, quota.Windows.Count);
+    Equal("Fable 周额度", quota.Windows[2].Name);
+    Equal(46d, quota.Windows[2].RemainingPercent);
+    Equal(
+        DateTimeOffset.Parse("2026-07-28T16:30:00+00:00"),
+        quota.Windows[2].ResetsAt);
+});
+
 Run("Missing windows fail clearly", () =>
 {
     using var json = JsonDocument.Parse("{\"plan_type\":\"plus\",\"rate_limit\":null}");

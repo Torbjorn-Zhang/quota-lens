@@ -34,6 +34,8 @@ flowchart LR
 4. The UI receives only quota percentages, reset times, plan details, and friendly errors.
 5. Settings never contain tokens, response bodies, or account IDs.
 
+The Claude parser reads the standard 5-hour and 7-day windows and also recognizes `weekly_scoped` model allowances in `limits[]`. When several model-scoped allowances are present, Fable is preferred; when none is returned, the extra UI row stays hidden.
+
 ## Runtime policy
 
 - The UI refresh timer runs every 60 seconds.

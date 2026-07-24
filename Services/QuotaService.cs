@@ -140,6 +140,7 @@ public sealed class QuotaService : IDisposable
         var windows = new List<QuotaWindow>();
         AddClaudeWindow(windows, root, "five_hour", "5 小时");
         AddClaudeWindow(windows, root, "seven_day", "7 天");
+        AddClaudeScopedWindow(windows, root);
 
         if (windows.Count == 0)
         {
@@ -199,6 +200,57 @@ public sealed class QuotaService : IDisposable
         var used = GetNumber(window, "utilization");
         if (used is null) return;
         result.Add(new QuotaWindow(name, used.Value, GetDateTime(window, "resets_at")));
+    }
+
+    private static void AddClaudeScopedWindow(
+        ICollection<QuotaWindow> result,
+        JsonElement root)
+    {
+        if (!root.TryGetProperty("limits", out var limits)
+            || limits.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        var candidates = new List<(string Name, double Used, DateTimeOffset? ResetsAt, bool IsActive)>();
+        foreach (var limit in limits.EnumerateArray())
+        {
+            if (limit.ValueKind != JsonValueKind.Object
+                || !string.Equals(GetString(limit, "kind"), "weekly_scoped", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var used = GetNumber(limit, "percent") ?? GetNumber(limit, "utilization");
+            if (used is null
+                || !TryObject(limit, "scope", out var scope)
+                || !TryObject(scope, "model", out var model))
+            {
+                continue;
+            }
+
+            var displayName = GetString(model, "display_name") ?? GetString(model, "id");
+            if (string.IsNullOrWhiteSpace(displayName)) continue;
+
+            candidates.Add((
+                displayName.Trim(),
+                used.Value,
+                GetDateTime(limit, "resets_at"),
+                GetBoolean(limit, "is_active") == true));
+        }
+
+        var selected = candidates
+            .OrderByDescending(candidate =>
+                candidate.Name.Contains("Fable", StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(candidate => candidate.IsActive)
+            .ThenByDescending(candidate => candidate.Used)
+            .FirstOrDefault();
+
+        if (string.IsNullOrWhiteSpace(selected.Name)) return;
+        result.Add(new QuotaWindow(
+            $"{selected.Name} 周额度",
+            selected.Used,
+            selected.ResetsAt));
     }
 
     private static void AddClaudeModelInfo(

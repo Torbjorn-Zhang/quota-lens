@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added / 新增
+
+- Automatic Fable 5 and model-scoped weekly quota monitoring / 自动监控 Fable 5 与其他模型的独立周额度
+
+### Changed / 变更
+
+- The widget now grows vertically only when a model-scoped quota row is available / 仅在存在模型独立额度时自动扩展小组件高度
+
 ### Planned / 计划
 
 - In-app language switching / 应用内语言切换
