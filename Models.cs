@@ -34,4 +34,5 @@ public sealed class AppSettings
     public double WidgetOpacity { get; set; } = 0.74;
     public double? WindowLeft { get; set; }
     public double? WindowTop { get; set; }
+    public List<string> NotifiedLowQuotaKeys { get; set; } = new();
 }

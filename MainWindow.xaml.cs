@@ -44,6 +44,11 @@ public partial class MainWindow : Window
         _settings = _settingsService.Load();
         _settings.PollSeconds = Math.Clamp(_settings.PollSeconds, 30, 900);
         _settings.WidgetOpacity = Math.Clamp(_settings.WidgetOpacity, 0.55, 0.96);
+        _settings.NotifiedLowQuotaKeys ??= new List<string>();
+        foreach (var key in _settings.NotifiedLowQuotaKeys)
+        {
+            _warningKeys.Add(key);
+        }
 
         if (GlassFrame.Background is Freezable freezable)
         {
@@ -228,8 +233,7 @@ public partial class MainWindow : Window
 
             UpdatedText.Text = $"更新 {_snapshot.FetchedAt:HH:mm:ss} · {_settings.PollSeconds}s";
             UpdateTrayText();
-            NotifyLowQuota(_snapshot.Codex);
-            NotifyLowQuota(_snapshot.Claude);
+            NotifyLowQuota(_snapshot.Codex, _snapshot.Claude);
         }
         catch (OperationCanceledException)
         {
@@ -341,24 +345,26 @@ public partial class MainWindow : Window
         _trayIcon.Text = text.Length <= 63 ? text : text[..63];
     }
 
-    private void NotifyLowQuota(ProviderQuota provider)
+    private void NotifyLowQuota(params ProviderQuota[] providers)
     {
-        if (_trayIcon is null || !provider.IsAvailable) return;
-        foreach (var window in provider.Windows)
-        {
-            var key = $"{provider.Provider}:{window.Name}:{window.ResetsAt:O}";
-            if (window.RemainingPercent > 20)
-            {
-                _warningKeys.Remove(key);
-                continue;
-            }
-            if (!_warningKeys.Add(key)) continue;
+        if (_trayIcon is null) return;
 
-            _trayIcon.BalloonTipTitle = $"{provider.Provider} 额度提醒";
-            _trayIcon.BalloonTipText = $"{window.Name}额度仅剩 {window.RemainingPercent:0}%";
-            _trayIcon.BalloonTipIcon = Forms.ToolTipIcon.Warning;
-            _trayIcon.ShowBalloonTip(5000);
+        var batch = LowQuotaAlertService.Scan(providers, _warningKeys);
+        if (batch.StateChanged)
+        {
+            _settings.NotifiedLowQuotaKeys = _warningKeys.TakeLast(128).ToList();
+            _settingsService.Save(_settings);
         }
+
+        if (batch.Alerts.Count == 0) return;
+        var lines = batch.Alerts.Take(3).Select(alert =>
+            $"{alert.Provider} {alert.WindowName}剩余 {alert.RemainingPercent:0}%");
+        var suffix = batch.Alerts.Count > 3 ? $"\n另有 {batch.Alerts.Count - 3} 项" : string.Empty;
+
+        _trayIcon.BalloonTipTitle = "低额度提醒";
+        _trayIcon.BalloonTipText = string.Join("\n", lines) + suffix;
+        _trayIcon.BalloonTipIcon = Forms.ToolTipIcon.Warning;
+        _trayIcon.ShowBalloonTip(5000);
     }
 
     private static string PrimaryRemaining(ProviderQuota quota) =>

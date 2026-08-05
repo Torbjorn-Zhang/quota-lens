@@ -148,6 +148,57 @@ Run("Claude Desktop chooses newest profile token", () =>
     Equal("newer-token", CredentialReader.FindClaudeDesktopToken(json.RootElement));
 });
 
+Run("Low quota alerts are coalesced and persisted", () =>
+{
+    var reset = DateTimeOffset.Parse("2026-08-10T12:00:00+00:00");
+    var notified = new HashSet<string>(StringComparer.Ordinal);
+    var providers = new[]
+    {
+        new ProviderQuota("Codex", "plus", new[]
+        {
+            new QuotaWindow("5 小时", 92, reset)
+        }),
+        new ProviderQuota("Claude Code", "max", new[]
+        {
+            new QuotaWindow("Fable 周额度", 95, reset)
+        })
+    };
+
+    var first = LowQuotaAlertService.Scan(providers, notified);
+    Equal(2, first.Alerts.Count);
+    Equal(true, first.StateChanged);
+
+    var sameProcess = LowQuotaAlertService.Scan(providers, notified);
+    Equal(0, sameProcess.Alerts.Count);
+    Equal(false, sameProcess.StateChanged);
+
+    var temporaryRecovery = new[]
+    {
+        new ProviderQuota("Claude Code", "max", new[]
+        {
+            new QuotaWindow("Fable 周额度", 70, reset)
+        })
+    };
+    LowQuotaAlertService.Scan(temporaryRecovery, notified);
+    var lowAgain = LowQuotaAlertService.Scan(providers, notified);
+    Equal(0, lowAgain.Alerts.Count);
+
+    var afterRestart = LowQuotaAlertService.Scan(
+        providers,
+        new HashSet<string>(notified, StringComparer.Ordinal));
+    Equal(0, afterRestart.Alerts.Count);
+
+    var nextWindow = new[]
+    {
+        new ProviderQuota("Claude Code", "max", new[]
+        {
+            new QuotaWindow("Fable 周额度", 95, reset.AddDays(7))
+        })
+    };
+    var afterReset = LowQuotaAlertService.Scan(nextWindow, notified);
+    Equal(1, afterReset.Alerts.Count);
+});
+
 if (args.Contains("--live", StringComparer.OrdinalIgnoreCase))
 {
     await RunLiveAsync();

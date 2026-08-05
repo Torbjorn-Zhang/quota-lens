@@ -20,7 +20,7 @@ Quota Lens is a lightweight, translucent Windows desktop widget that shows subsc
 - Shows plan details, reset countdowns, extra credits, and model-specific weekly allowances
 - Refreshes Codex every 60 seconds and Claude no more than once every 3 minutes
 - Applies 5/10/20/30-minute backoff after Claude HTTP 429 responses while keeping the last successful result
-- Sends a Windows notification when remaining quota falls below 20%
+- Sends a Windows notification below 20%; simultaneous alerts are combined and each reset period is notified only once
 - Translucent movable widget with always-on-top, tray mode, and opacity controls
 - Turns off all displays with one click while preventing automatic system sleep; mouse or keyboard input wakes the displays
 - Optional launch at Windows sign-in
