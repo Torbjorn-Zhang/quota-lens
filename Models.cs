@@ -31,6 +31,7 @@ public sealed class AppSettings
     public int PollSeconds { get; set; } = 60;
     public bool StartWithWindows { get; set; }
     public bool AlwaysOnTop { get; set; }
+    public bool LowQuotaNotificationsEnabled { get; set; } = true;
     public double WidgetOpacity { get; set; } = 0.74;
     public double? WindowLeft { get; set; }
     public double? WindowTop { get; set; }

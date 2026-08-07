@@ -42,7 +42,17 @@ internal static class LowQuotaAlertService
 
     private static string CreateKey(string provider, QuotaWindow window)
     {
-        var reset = window.ResetsAt?.ToUniversalTime().ToString("O") ?? "unknown";
+        var reset = window.ResetsAt is DateTimeOffset resetAt
+            ? RoundToNearestMinute(resetAt).ToString("yyyy-MM-dd'T'HH:mm'Z'")
+            : "unknown";
         return $"{provider}:{window.Name}:{reset}";
+    }
+
+    private static DateTimeOffset RoundToNearestMinute(DateTimeOffset value)
+    {
+        var utc = value.ToUniversalTime();
+        var ticks = ((utc.Ticks + TimeSpan.TicksPerMinute / 2) / TimeSpan.TicksPerMinute)
+                    * TimeSpan.TicksPerMinute;
+        return new DateTimeOffset(ticks, TimeSpan.Zero);
     }
 }

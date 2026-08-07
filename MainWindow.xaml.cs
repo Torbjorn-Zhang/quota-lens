@@ -30,6 +30,7 @@ public partial class MainWindow : Window
     private DrawingIcon? _trayIconImage;
     private Forms.ToolStripMenuItem? _pinMenuItem;
     private Forms.ToolStripMenuItem? _autoStartMenuItem;
+    private Forms.ToolStripMenuItem? _lowQuotaNotificationsMenuItem;
     private readonly List<Forms.ToolStripMenuItem> _opacityMenuItems = new();
     private QuotaSnapshot? _snapshot;
     private CancellationTokenSource? _refreshCancellation;
@@ -111,6 +112,14 @@ public partial class MainWindow : Window
         }
         UpdateOpacityMenu();
         menu.Items.Add(opacityMenu);
+
+        _lowQuotaNotificationsMenuItem = new Forms.ToolStripMenuItem("低额度提醒")
+        {
+            Checked = _settings.LowQuotaNotificationsEnabled
+        };
+        _lowQuotaNotificationsMenuItem.Click += (_, _) => Dispatcher.Invoke(() =>
+            SetLowQuotaNotifications(!_settings.LowQuotaNotificationsEnabled));
+        menu.Items.Add(_lowQuotaNotificationsMenuItem);
 
         _autoStartMenuItem = new Forms.ToolStripMenuItem("开机启动")
         {
@@ -347,7 +356,7 @@ public partial class MainWindow : Window
 
     private void NotifyLowQuota(params ProviderQuota[] providers)
     {
-        if (_trayIcon is null) return;
+        if (_trayIcon is null || !_settings.LowQuotaNotificationsEnabled) return;
 
         var batch = LowQuotaAlertService.Scan(providers, _warningKeys);
         if (batch.StateChanged)
@@ -365,6 +374,16 @@ public partial class MainWindow : Window
         _trayIcon.BalloonTipText = string.Join("\n", lines) + suffix;
         _trayIcon.BalloonTipIcon = Forms.ToolTipIcon.Warning;
         _trayIcon.ShowBalloonTip(5000);
+    }
+
+    private void SetLowQuotaNotifications(bool enabled)
+    {
+        _settings.LowQuotaNotificationsEnabled = enabled;
+        if (_lowQuotaNotificationsMenuItem is not null)
+        {
+            _lowQuotaNotificationsMenuItem.Checked = enabled;
+        }
+        _settingsService.Save(_settings);
     }
 
     private static string PrimaryRemaining(ProviderQuota quota) =>

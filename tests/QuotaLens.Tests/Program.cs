@@ -172,6 +172,26 @@ Run("Low quota alerts are coalesced and persisted", () =>
     Equal(0, sameProcess.Alerts.Count);
     Equal(false, sameProcess.StateChanged);
 
+    var jitteredReset = new[]
+    {
+        new ProviderQuota("Claude Code", "max", new[]
+        {
+            new QuotaWindow("Fable 周额度", 95, reset.AddMilliseconds(350))
+        })
+    };
+    var timestampJitter = LowQuotaAlertService.Scan(jitteredReset, notified);
+    Equal(0, timestampJitter.Alerts.Count);
+
+    var negativeTimestampJitter = new[]
+    {
+        new ProviderQuota("Claude Code", "max", new[]
+        {
+            new QuotaWindow("Fable 周额度", 95, reset.AddMilliseconds(-350))
+        })
+    };
+    var timestampJitterBeforeMinute = LowQuotaAlertService.Scan(negativeTimestampJitter, notified);
+    Equal(0, timestampJitterBeforeMinute.Alerts.Count);
+
     var temporaryRecovery = new[]
     {
         new ProviderQuota("Claude Code", "max", new[]
