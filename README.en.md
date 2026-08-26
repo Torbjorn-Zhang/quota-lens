@@ -15,7 +15,7 @@ Quota Lens is a lightweight, translucent Windows desktop widget that shows subsc
 
 ## Features
 
-- Displays the 5-hour, 7-day, and other available quota windows for Codex and Claude Code
+- Displays the 5-hour, 7-day, and other available quota windows for Codex and Claude Code; a restored Codex short window automatically reappears on the next refresh
 - Automatically detects model-scoped weekly allowances such as Fable 5 and hides the extra row when none is returned
 - Shows plan details, reset countdowns, extra credits, and model-specific weekly allowances
 - Refreshes Codex every 60 seconds and Claude no more than once every 3 minutes

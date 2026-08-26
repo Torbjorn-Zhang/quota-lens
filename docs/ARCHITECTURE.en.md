@@ -40,6 +40,7 @@ The Claude parser reads the standard 5-hour and 7-day windows and also recognize
 
 - The UI refresh timer runs every 60 seconds.
 - Codex is queried on each tick; Claude is queried no more than once every 3 minutes.
+- The Codex 5-hour window may be temporarily absent; when the endpoint returns it again, the next refresh automatically restores the two-column layout.
 - Claude HTTP 429 responses trigger exponential backoff up to 30 minutes while the last successful data remains visible.
 - Low-quota notification state and its toggle are stored locally; reset timestamps are normalized to the nearest minute, each quota period is notified once, and simultaneous alerts are combined.
 - Single-instance protection applies only to `QuotaLens`; it never inspects, terminates, or blocks Claude or Codex processes.

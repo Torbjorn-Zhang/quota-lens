@@ -37,6 +37,46 @@ Run("Codex parser", () =>
     Equal("附加 credits：9.99", quota.ExtraInfo);
 });
 
+Run("Codex restored 5-hour quota parser", () =>
+{
+    using var weeklyOnlyJson = JsonDocument.Parse(@"{
+      ""plan_type"": ""plus"",
+      ""rate_limit"": {
+        ""primary_window"": null,
+        ""secondary_window"": {
+          ""used_percent"": 24,
+          ""limit_window_seconds"": 604800,
+          ""reset_at"": 1784600000
+        }
+      }
+    }");
+    var weeklyOnly = QuotaService.ParseCodex(weeklyOnlyJson.RootElement);
+    Equal(1, weeklyOnly.Windows.Count);
+    Equal("7 天", weeklyOnly.Windows[0].Name);
+
+    using var restoredJson = JsonDocument.Parse(@"{
+      ""plan_type"": ""plus"",
+      ""rate_limit"": {
+        ""primary_window"": {
+          ""used_percent"": 100,
+          ""limit_window_seconds"": 18000,
+          ""reset_at"": 1784218000
+        },
+        ""secondary_window"": {
+          ""used_percent"": 24,
+          ""limit_window_seconds"": 604800,
+          ""reset_at"": 1784600000
+        }
+      }
+    }");
+    var restored = QuotaService.ParseCodex(restoredJson.RootElement);
+    Equal(2, restored.Windows.Count);
+    Equal("5 小时", restored.Windows[0].Name);
+    Equal(0d, restored.Windows[0].RemainingPercent);
+    Equal("7 天", restored.Windows[1].Name);
+    Equal(76d, restored.Windows[1].RemainingPercent);
+});
+
 Run("Claude parser", () =>
 {
     using var json = JsonDocument.Parse(@"{

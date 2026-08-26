@@ -15,6 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - The widget now grows vertically only when a model-scoped quota row is available / 仅在存在模型独立额度时自动扩展小组件高度
 - Low-quota alerts are combined and remembered across restarts, limiting each quota window to one notification per reset period / 合并低额度提醒并跨重启记忆，每个额度窗口在一次重置周期内只通知一次
 - Model reset timestamps are normalized to prevent sub-second API jitter from retriggering alerts; notifications can now be disabled from the tray / 归一化模型重置时间，防止接口毫秒抖动重复提醒，并新增托盘提醒开关
+- Codex 5-hour quota restoration is covered as a first-class refresh transition / 将 Codex 5 小时额度恢复纳入正式刷新兼容与回归测试
 
 ### Planned / 计划
 
