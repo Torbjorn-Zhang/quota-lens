@@ -92,7 +92,7 @@ public partial class MainWindow : Window
     {
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("打开 Quota Lens", null, (_, _) => ShowWindow());
-        menu.Items.Add("立即刷新", null, async (_, _) => await RefreshAsync());
+        menu.Items.Add("立即刷新", null, async (_, _) => await RefreshAsync(forceClaudeRefresh: true));
         menu.Items.Add("息屏并持续保持运行", null, (_, _) =>
             Dispatcher.BeginInvoke(new Action(() => _ = TurnOffScreenAsync())));
         _pinMenuItem = new Forms.ToolStripMenuItem("窗口置顶")
@@ -191,7 +191,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task RefreshAsync()
+    private async Task RefreshAsync(bool forceClaudeRefresh = false)
     {
         if (_refreshCancellation is not null) return;
 
@@ -200,7 +200,9 @@ public partial class MainWindow : Window
         RefreshButton.Opacity = 0.45;
         try
         {
-            _snapshot = await _quotaService.FetchAsync(_refreshCancellation.Token);
+            _snapshot = await _quotaService.FetchAsync(
+                _refreshCancellation.Token,
+                forceClaudeRefresh);
             RenderProvider(
                 _snapshot.Codex,
                 CodexPlanText,
@@ -414,7 +416,8 @@ public partial class MainWindow : Window
     private static SolidColorBrush Brush(string color) =>
         new((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(color));
 
-    private async void RefreshButton_Click(object sender, RoutedEventArgs e) => await RefreshAsync();
+    private async void RefreshButton_Click(object sender, RoutedEventArgs e) =>
+        await RefreshAsync(forceClaudeRefresh: true);
 
     private void CloseButton_Click(object sender, RoutedEventArgs e) => HideToTray();
 

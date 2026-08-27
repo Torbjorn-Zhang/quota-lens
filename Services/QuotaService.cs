@@ -15,6 +15,7 @@ public sealed class QuotaService : IDisposable
     private ProviderQuota? _lastClaudeQuota;
     private DateTimeOffset _nextClaudeFetch = DateTimeOffset.MinValue;
     private TimeSpan _claudeBackoff = TimeSpan.FromMinutes(5);
+    private bool _claudeRateLimited;
 
     public QuotaService()
     {
@@ -25,10 +26,12 @@ public sealed class QuotaService : IDisposable
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("QuotaLens/0.1 Windows");
     }
 
-    public async Task<QuotaSnapshot> FetchAsync(CancellationToken cancellationToken)
+    public async Task<QuotaSnapshot> FetchAsync(
+        CancellationToken cancellationToken,
+        bool forceClaudeRefresh = false)
     {
         var codexTask = FetchCodexSafeAsync(cancellationToken);
-        var claudeTask = FetchClaudeManagedAsync(cancellationToken);
+        var claudeTask = FetchClaudeManagedAsync(cancellationToken, forceClaudeRefresh);
         await Task.WhenAll(codexTask, claudeTask);
         return new QuotaSnapshot(await codexTask, await claudeTask, DateTimeOffset.Now);
     }
@@ -56,10 +59,12 @@ public sealed class QuotaService : IDisposable
         }
     }
 
-    private async Task<ProviderQuota> FetchClaudeManagedAsync(CancellationToken cancellationToken)
+    private async Task<ProviderQuota> FetchClaudeManagedAsync(
+        CancellationToken cancellationToken,
+        bool forceRefresh)
     {
         var now = DateTimeOffset.Now;
-        if (now < _nextClaudeFetch)
+        if (now < _nextClaudeFetch && (!forceRefresh || _claudeRateLimited))
         {
             if (_lastClaudeQuota is not null) return _lastClaudeQuota;
             var wait = FormatRetryWait(_nextClaudeFetch - now);
@@ -77,10 +82,14 @@ public sealed class QuotaService : IDisposable
             await EnsureSuccessAsync(response, "Claude", cancellationToken);
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             using var json = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-            var quota = ParseClaude(json.RootElement);
+            var quota = ParseClaude(json.RootElement) with
+            {
+                Plan = FormatClaudePlan(credential.SubscriptionType, credential.RateLimitTier)
+            };
             _lastClaudeQuota = quota;
             _nextClaudeFetch = now + ClaudeRefreshInterval;
             _claudeBackoff = TimeSpan.FromMinutes(5);
+            _claudeRateLimited = false;
             return quota;
         }
         catch (QuotaRateLimitException ex)
@@ -89,6 +98,7 @@ public sealed class QuotaService : IDisposable
             var wait = serverWait > _claudeBackoff ? serverWait : _claudeBackoff;
             _nextClaudeFetch = DateTimeOffset.Now + wait;
             _claudeBackoff = TimeSpan.FromMinutes(Math.Min(30, _claudeBackoff.TotalMinutes * 2));
+            _claudeRateLimited = true;
 
             var status = $"Claude 查询暂时限流，保留上次数据 · {FormatRetryWait(wait)}后重试";
             if (_lastClaudeQuota is not null)
@@ -167,6 +177,23 @@ public sealed class QuotaService : IDisposable
             "Claude 订阅",
             windows,
             modelParts.Count > 0 ? string.Join(" · ", modelParts) : null);
+    }
+
+    internal static string FormatClaudePlan(string? subscriptionType, string? rateLimitTier)
+    {
+        var tier = rateLimitTier?.Trim().ToLowerInvariant();
+        if (tier?.Contains("max_20x", StringComparison.Ordinal) == true) return "Max 20×";
+        if (tier?.Contains("max_5x", StringComparison.Ordinal) == true) return "Max 5×";
+
+        return subscriptionType?.Trim().ToLowerInvariant() switch
+        {
+            "max" => "Max",
+            "pro" => "Pro",
+            "team" => "Team",
+            "enterprise" => "Enterprise",
+            "free" => "Free",
+            _ => "Claude 订阅"
+        };
     }
 
     private static void AddCodexWindow(

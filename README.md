@@ -17,6 +17,7 @@ Quota Lens 是一个轻量、透明的 Windows 桌面小组件，用于实时查
 
 - 同时显示 Codex 与 Claude Code 的 5 小时、7 天等额度窗口；Codex 短周期额度恢复后会在下次刷新自动重新显示
 - 自动识别并显示 Fable 5 等模型的独立周额度；接口未返回时自动隐藏
+- 识别 Claude Pro、Max 5× 与 Max 20× 方案；点击刷新会立即更新 Claude 方案与额度
 - 显示订阅方案、重置倒计时、附加 credits 与模型专项周额度
 - Codex 每 60 秒刷新；Claude 最快每 3 分钟刷新
 - Claude 遇到 HTTP 429 时自动按 5/10/20/30 分钟退避，并保留上次成功数据

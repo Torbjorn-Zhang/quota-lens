@@ -16,6 +16,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Low-quota alerts are combined and remembered across restarts, limiting each quota window to one notification per reset period / 合并低额度提醒并跨重启记忆，每个额度窗口在一次重置周期内只通知一次
 - Model reset timestamps are normalized to prevent sub-second API jitter from retriggering alerts; notifications can now be disabled from the tray / 归一化模型重置时间，防止接口毫秒抖动重复提醒，并新增托盘提醒开关
 - Codex 5-hour quota restoration is covered as a first-class refresh transition / 将 Codex 5 小时额度恢复纳入正式刷新兼容与回归测试
+- Claude account metadata now identifies Pro, Max 5×, and Max 20×; manual refresh bypasses the normal cache while preserving 429 backoff / 读取 Claude 账户元数据识别 Pro、Max 5× 与 Max 20×，手动刷新绕过普通缓存但仍遵守 429 退避
 
 ### Planned / 计划
 

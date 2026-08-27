@@ -108,6 +108,15 @@ Run("Claude parser", () =>
     Contains("额外用量 23.5 / 100", quota.ExtraInfo);
 });
 
+Run("Claude Max plan formatter", () =>
+{
+    Equal("Max 20×", QuotaService.FormatClaudePlan("max", "default_claude_max_20x"));
+    Equal("Max 5×", QuotaService.FormatClaudePlan("max", "default_claude_max_5x"));
+    Equal("Max", QuotaService.FormatClaudePlan("max", null));
+    Equal("Pro", QuotaService.FormatClaudePlan("pro", null));
+    Equal("Claude 订阅", QuotaService.FormatClaudePlan(null, null));
+});
+
 Run("Claude Fable scoped quota parser", () =>
 {
     using var json = JsonDocument.Parse(@"{
@@ -181,11 +190,16 @@ Run("Claude Desktop chooses newest profile token", () =>
       ""account-b:https://api.anthropic.com:user:inference user:profile user:sessions:claude_code"": {
         ""token"": ""newer-token"",
         ""refreshToken"": ""newer-refresh"",
-        ""expiresAt"": 200
+        ""expiresAt"": 200,
+        ""subscriptionType"": ""max"",
+        ""rateLimitTier"": ""default_claude_max_20x""
       }
     }");
 
     Equal("newer-token", CredentialReader.FindClaudeDesktopToken(json.RootElement));
+    var credential = CredentialReader.FindClaudeDesktopCredential(json.RootElement);
+    Equal("max", credential?.SubscriptionType);
+    Equal("default_claude_max_20x", credential?.RateLimitTier);
 });
 
 Run("Low quota alerts are coalesced and persisted", () =>
@@ -337,7 +351,7 @@ static void PrintProvider(ProviderQuota quota)
 
     var windows = string.Join(", ", quota.Windows.Select(window =>
         $"{window.Name} remaining {window.RemainingPercent:0}%"));
-    Console.WriteLine($"LIVE {quota.Provider}: {windows}");
+    Console.WriteLine($"LIVE {quota.Provider} [{quota.Plan}]: {windows}");
 }
 
 static void Equal<T>(T expected, T actual)
