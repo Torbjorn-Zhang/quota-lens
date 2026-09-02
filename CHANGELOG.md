@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Planned / 计划
+
+- In-app language switching / 应用内语言切换
+- Signed installer and update channel / 签名安装包与更新通道
+
+## [0.4.6] - 2026-09-02
+
 ### Added / 新增
 
 - Automatic Fable 5 and model-scoped weekly quota monitoring / 自动监控 Fable 5 与其他模型的独立周额度
@@ -24,11 +31,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ### Fixed / 修复
 
 - Tooltips (button hints and the shared Fable row) now use the widget's dark glass theme; the default WPF tooltip drew near-white text on a white box / 提示气泡（按钮提示与共用 Fable 行）改用小组件的深色玻璃样式，此前 WPF 默认样式是白底白字的一片白框
-
-### Planned / 计划
-
-- In-app language switching / 应用内语言切换
-- Signed installer and update channel / 签名安装包与更新通道
 
 ## [0.3.3] - 2026-07-17
 
@@ -68,5 +70,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - Initial Codex and Claude Code quota monitoring / 初始 Codex 与 Claude Code 额度监控
 
-[Unreleased]: https://github.com/Torbjorn-Zhang/quota-lens/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/Torbjorn-Zhang/quota-lens/compare/v0.4.6...HEAD
+[0.4.6]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.4.6
 [0.3.3]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.3.3
