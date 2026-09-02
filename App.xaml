@@ -26,6 +26,40 @@
             <Setter Property="FontFamily" Value="Segoe UI, Microsoft YaHei UI" />
             <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
         </Style>
+        <!-- Dark glass tooltip: the default WPF tooltip is white, and the implicit TextBlock style above
+             paints text near-white, so button hints and the shared-Fable tooltip rendered as a blank box. -->
+        <Style TargetType="ToolTip">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="HasDropShadow" Value="False" />
+            <Setter Property="FontFamily" Value="Segoe UI, Microsoft YaHei UI" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="Background" Value="#F2141B2E" />
+            <Setter Property="BorderBrush" Value="#38FFFFFF" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="MaxWidth" Value="300" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                                CornerRadius="8" Padding="{TemplateBinding Padding}" Margin="4">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#000000" BlurRadius="12" ShadowDepth="2" Opacity="0.45" />
+                            </Border.Effect>
+                            <ContentPresenter>
+                                <ContentPresenter.Resources>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+                                        <Setter Property="TextWrapping" Value="Wrap" />
+                                    </Style>
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style TargetType="Button">
             <Setter Property="FontFamily" Value="Segoe UI, Microsoft YaHei UI" />
             <Setter Property="Foreground" Value="{StaticResource TextBrush}" />

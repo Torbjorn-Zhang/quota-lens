@@ -21,6 +21,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Codex 5-hour quota restoration is covered as a first-class refresh transition / 将 Codex 5 小时额度恢复纳入正式刷新兼容与回归测试
 - Claude account metadata now identifies Pro, Max 5×, and Max 20×; manual refresh bypasses the normal cache while preserving 429 backoff / 读取 Claude 账户元数据识别 Pro、Max 5× 与 Max 20×，手动刷新绕过普通缓存但仍遵守 429 退避
 
+### Fixed / 修复
+
+- Tooltips (button hints and the shared Fable row) now use the widget's dark glass theme; the default WPF tooltip drew near-white text on a white box / 提示气泡（按钮提示与共用 Fable 行）改用小组件的深色玻璃样式，此前 WPF 默认样式是白底白字的一片白框
+
 ### Planned / 计划
 
 - In-app language switching / 应用内语言切换
