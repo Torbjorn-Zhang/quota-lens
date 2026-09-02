@@ -22,6 +22,8 @@ dotnet build .\QuotaLens.csproj -c Release
 dotnet run --project .\tests\QuotaLens.Tests\QuotaLens.Tests.csproj -c Release
 ```
 
+Diagnostics / 诊断：append `-- --raw-usage` to the test command to print the structural shape of the live Claude usage response; string values are masked except a short allowlist of structural keys (kind, resets_at, …), `scope.model.display_name`, and model ids starting with `claude-`. Use it when the upstream format changes. / 在测试命令后加 `-- --raw-usage` 可打印 Claude usage 响应的结构；除少数结构键（kind、resets_at 等）、`scope.model.display_name` 和 `claude-` 开头的模型 id 外，字符串值均脱敏，上游格式变化时用它排查。
+
 ## Pull requests / Pull Request
 
 1. Create a focused branch from `main`. / 从 `main` 创建单一目标的分支。

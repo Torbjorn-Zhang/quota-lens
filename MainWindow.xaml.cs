@@ -32,6 +32,7 @@ public partial class MainWindow : Window
     private Forms.ToolStripMenuItem? _autoStartMenuItem;
     private Forms.ToolStripMenuItem? _lowQuotaNotificationsMenuItem;
     private readonly List<Forms.ToolStripMenuItem> _opacityMenuItems = new();
+    private readonly List<ScopedQuotaRow> _claudeScopedRows = new();
     private QuotaSnapshot? _snapshot;
     private CancellationTokenSource? _refreshCancellation;
     private bool _allowClose;
@@ -233,14 +234,7 @@ public partial class MainWindow : Window
                 ClaudeSecondaryValue,
                 ClaudeSecondaryBar,
                 ClaudeSecondaryReset);
-            RenderWindow(
-                _snapshot.Claude.IsAvailable
-                    ? _snapshot.Claude.Windows.ElementAtOrDefault(2)
-                    : null,
-                ClaudeScopedName,
-                ClaudeScopedValue,
-                ClaudeScopedBar,
-                ClaudeScopedReset);
+            RenderClaudeScopedRows(_snapshot.Claude);
 
             UpdatedText.Text = $"更新 {_snapshot.FetchedAt:HH:mm:ss} · {_settings.PollSeconds}s";
             UpdateTrayText();
@@ -295,9 +289,10 @@ public partial class MainWindow : Window
             ? Visibility.Collapsed
             : Visibility.Visible;
 
-        RenderWindow(quota.Windows.ElementAtOrDefault(0), primaryName, primaryValue, primaryBar, primaryReset);
-        RenderWindow(quota.Windows.ElementAtOrDefault(1), secondaryName, secondaryValue, secondaryBar, secondaryReset);
-        SetWindowColumns(primaryName, secondaryName, quota.Windows.Count);
+        var standard = quota.StandardWindows;
+        RenderWindow(standard.ElementAtOrDefault(0), primaryName, primaryValue, primaryBar, primaryReset);
+        RenderWindow(standard.ElementAtOrDefault(1), secondaryName, secondaryValue, secondaryBar, secondaryReset);
+        SetWindowColumns(primaryName, secondaryName, standard.Count);
     }
 
     private static void SetWindowColumns(TextBlock primaryName, TextBlock secondaryName, int windowCount)
@@ -332,13 +327,76 @@ public partial class MainWindow : Window
         reset.Text = FormatReset(window.ResetsAt);
     }
 
+    // The family-level bucket the usage API reports today ("Fable", model.id null). If upstream ever
+    // splits it into "Fable 5" / "Fable 5.1" rows, those names no longer match and get no tooltip.
+    private const string SharedFableWindowName = "Fable" + QuotaService.WeeklyScopedSuffix;
+    private const string FableSharedAllowanceTip =
+        "按 Anthropic 说明，Fable 5 与 Fable 5.1 共用这一份 Fable 周额度。";
+
+    /// <summary>
+    /// Renders one row per Claude model-family allowance. Rows are created lazily and reused across
+    /// refreshes; surplus rows collapse so the widget only grows when the API returns more families.
+    /// </summary>
+    private void RenderClaudeScopedRows(ProviderQuota quota)
+    {
+        var windows = quota.IsAvailable ? quota.ModelScopedWindows : Array.Empty<QuotaWindow>();
+        while (_claudeScopedRows.Count < windows.Count)
+        {
+            var row = CreateScopedRow(isFirst: _claudeScopedRows.Count == 0);
+            _claudeScopedRows.Add(row);
+            ClaudeScopedHost.Children.Add(row.Container);
+        }
+
+        for (var index = 0; index < _claudeScopedRows.Count; index++)
+        {
+            var row = _claudeScopedRows[index];
+            var window = index < windows.Count ? windows[index] : null;
+            RenderWindow(window, row.Name, row.Value, row.Bar, row.Reset);
+            row.Container.ToolTip = window is not null
+                                    && string.Equals(window.Name, SharedFableWindowName, StringComparison.OrdinalIgnoreCase)
+                ? FableSharedAllowanceTip
+                : null;
+        }
+
+        ClaudeScopedHost.Visibility = windows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private ScopedQuotaRow CreateScopedRow(bool isFirst)
+    {
+        var name = new TextBlock { Style = (Style)FindResource("MutedText") };
+        var value = new TextBlock
+        {
+            Style = (Style)FindResource("QuotaValue"),
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Right
+        };
+        var header = new Grid();
+        header.Children.Add(name);
+        header.Children.Add(value);
+
+        var bar = new WpfProgressBar
+        {
+            Style = (Style)FindResource("GlassProgress"),
+            Margin = new Thickness(0, 5, 0, 4)
+        };
+        var reset = new TextBlock { Style = (Style)FindResource("MutedText") };
+
+        var container = new StackPanel { Margin = new Thickness(0, isFirst ? 10 : 8, 0, 0) };
+        container.Children.Add(header);
+        container.Children.Add(bar);
+        container.Children.Add(reset);
+        return new ScopedQuotaRow(container, name, value, bar, reset);
+    }
+
     private void UpdateCountdowns()
     {
-        foreach (var text in new[]
-                 {
-                     CodexPrimaryReset, CodexSecondaryReset,
-                     ClaudePrimaryReset, ClaudeSecondaryReset, ClaudeScopedReset
-                 })
+        var resets = new List<TextBlock>
+        {
+            CodexPrimaryReset, CodexSecondaryReset,
+            ClaudePrimaryReset, ClaudeSecondaryReset
+        };
+        resets.AddRange(_claudeScopedRows.Select(row => row.Reset));
+
+        foreach (var text in resets)
         {
             if (text.Tag is QuotaWindow window)
             {
@@ -346,6 +404,13 @@ public partial class MainWindow : Window
             }
         }
     }
+
+    private sealed record ScopedQuotaRow(
+        StackPanel Container,
+        TextBlock Name,
+        TextBlock Value,
+        WpfProgressBar Bar,
+        TextBlock Reset);
 
     private void UpdateTrayText()
     {

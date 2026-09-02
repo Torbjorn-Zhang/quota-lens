@@ -9,8 +9,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ### Added / 新增
 
 - Automatic Fable 5 and model-scoped weekly quota monitoring / 自动监控 Fable 5 与其他模型的独立周额度
+- `--raw-usage` diagnostic in the parser test harness prints the structural shape of the live Claude usage response; string values are masked except a short allowlist of structural keys (kind, resets_at, …), `scope.model.display_name`, and model ids starting with `claude-` / 解析器测试新增 `--raw-usage` 诊断模式，打印 Claude usage 响应的结构；除少数结构键（kind、resets_at 等）、`scope.model.display_name` 和 `claude-` 开头的模型 id 外，字符串值均脱敏
 
 ### Changed / 变更
+
+- Every Claude model-family weekly allowance is now shown as its own row (Fable first, deduplicated by display name) instead of only the preferred one; the usage API currently reports a single "Fable" bucket shared by Fable 5 and Fable 5.1, and an upstream split would appear as an extra row automatically / 所有 Claude 模型家族的周额度逐行显示（Fable 优先、按显示名去重），不再只显示一条；usage 接口目前只返回一个由 Fable 5 与 Fable 5.1 共用的 "Fable" 桶，若上游拆分会自动新增一行
 
 - The widget now grows vertically only when a model-scoped quota row is available / 仅在存在模型独立额度时自动扩展小组件高度
 - Low-quota alerts are combined and remembered across restarts, limiting each quota window to one notification per reset period / 合并低额度提醒并跨重启记忆，每个额度窗口在一次重置周期内只通知一次

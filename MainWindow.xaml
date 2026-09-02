@@ -259,20 +259,8 @@
                                 </StackPanel>
                             </Grid>
 
-                            <StackPanel x:Name="ClaudeScopedPanel" Grid.Row="2" Margin="0,10,0,0"
-                                        Visibility="Collapsed">
-                                <Grid>
-                                    <TextBlock x:Name="ClaudeScopedName" Text="Fable 周额度"
-                                               Style="{StaticResource MutedText}" />
-                                    <TextBlock x:Name="ClaudeScopedValue" Text="—"
-                                               Style="{StaticResource QuotaValue}"
-                                               HorizontalAlignment="Right" />
-                                </Grid>
-                                <ProgressBar x:Name="ClaudeScopedBar" Style="{StaticResource GlassProgress}"
-                                             Margin="0,5,0,4" />
-                                <TextBlock x:Name="ClaudeScopedReset" Text="等待刷新"
-                                           Style="{StaticResource MutedText}" />
-                            </StackPanel>
+                            <!-- One row per Claude model-family weekly allowance; rows are generated in code-behind. -->
+                            <StackPanel x:Name="ClaudeScopedHost" Grid.Row="2" Visibility="Collapsed" />
 
                             <TextBlock x:Name="ClaudeErrorText" Grid.Row="1" Visibility="Collapsed" TextWrapping="Wrap"
                                        Foreground="#FFFF8E9A" FontSize="11" Margin="0,7,0,0" />

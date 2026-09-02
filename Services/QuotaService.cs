@@ -11,6 +11,7 @@ public sealed class QuotaService : IDisposable
     private const string CodexUsageUrl = "https://chatgpt.com/backend-api/wham/usage";
     private const string ClaudeUsageUrl = "https://api.anthropic.com/api/oauth/usage";
     private static readonly TimeSpan ClaudeRefreshInterval = TimeSpan.FromMinutes(3);
+    internal const string WeeklyScopedSuffix = " 周额度";
     private readonly HttpClient _httpClient;
     private ProviderQuota? _lastClaudeQuota;
     private DateTimeOffset _nextClaudeFetch = DateTimeOffset.MinValue;
@@ -150,7 +151,7 @@ public sealed class QuotaService : IDisposable
         var windows = new List<QuotaWindow>();
         AddClaudeWindow(windows, root, "five_hour", "5 小时");
         AddClaudeWindow(windows, root, "seven_day", "7 天");
-        AddClaudeScopedWindow(windows, root);
+        AddClaudeScopedWindows(windows, root);
 
         if (windows.Count == 0)
         {
@@ -229,7 +230,15 @@ public sealed class QuotaService : IDisposable
         result.Add(new QuotaWindow(name, used.Value, GetDateTime(window, "resets_at")));
     }
 
-    private static void AddClaudeScopedWindow(
+    /// <summary>
+    /// Adds one window per model family found in <c>limits[]</c> (<c>kind == "weekly_scoped"</c>).
+    /// The usage API reports these buckets per family rather than per model: as of 2026-09-02 a single
+    /// "Fable" scope (with a null <c>model.id</c>) covers both Fable 5 and Fable 5.1. Every family is
+    /// surfaced so that an upstream split into separate buckets shows up as an extra row automatically.
+    /// Entries that share a display name (for example per-surface duplicates) collapse into the most
+    /// used one, which is the conservative reading for a remaining-percentage display.
+    /// </summary>
+    private static void AddClaudeScopedWindows(
         ICollection<QuotaWindow> result,
         JsonElement root)
     {
@@ -256,7 +265,8 @@ public sealed class QuotaService : IDisposable
                 continue;
             }
 
-            var displayName = GetString(model, "display_name") ?? GetString(model, "id");
+            var displayName = GetString(model, "display_name");
+            if (string.IsNullOrWhiteSpace(displayName)) displayName = GetString(model, "id");
             if (string.IsNullOrWhiteSpace(displayName)) continue;
 
             candidates.Add((
@@ -266,18 +276,36 @@ public sealed class QuotaService : IDisposable
                 GetBoolean(limit, "is_active") == true));
         }
 
-        var selected = candidates
-            .OrderByDescending(candidate =>
-                candidate.Name.Contains("Fable", StringComparison.OrdinalIgnoreCase))
-            .ThenByDescending(candidate => candidate.IsActive)
-            .ThenByDescending(candidate => candidate.Used)
-            .FirstOrDefault();
+        var families = candidates
+            .GroupBy(candidate => candidate.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+            {
+                var mostUsed = group
+                    .OrderByDescending(candidate => candidate.Used)
+                    .ThenByDescending(candidate => candidate.IsActive)
+                    .ThenBy(candidate => candidate.Name, StringComparer.Ordinal)
+                    .First();
+                return (
+                    // Pick the casing deterministically; GroupBy's Key would follow array order.
+                    Name: group.Select(candidate => candidate.Name).OrderBy(name => name, StringComparer.Ordinal).First(),
+                    mostUsed.Used,
+                    mostUsed.ResetsAt,
+                    IsActive: group.Any(candidate => candidate.IsActive));
+            })
+            .OrderByDescending(family =>
+                family.Name.Contains("Fable", StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(family => family.IsActive)
+            .ThenByDescending(family => family.Used)
+            .ThenBy(family => family.Name, StringComparer.OrdinalIgnoreCase);
 
-        if (string.IsNullOrWhiteSpace(selected.Name)) return;
-        result.Add(new QuotaWindow(
-            $"{selected.Name} 周额度",
-            selected.Used,
-            selected.ResetsAt));
+        foreach (var family in families)
+        {
+            result.Add(new QuotaWindow(
+                family.Name + WeeklyScopedSuffix,
+                family.Used,
+                family.ResetsAt,
+                IsModelScoped: true));
+        }
     }
 
     private static void AddClaudeModelInfo(

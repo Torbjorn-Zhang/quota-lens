@@ -3,7 +3,8 @@ namespace QuotaLens;
 public sealed record QuotaWindow(
     string Name,
     double UsedPercent,
-    DateTimeOffset? ResetsAt)
+    DateTimeOffset? ResetsAt,
+    bool IsModelScoped = false)
 {
     public double RemainingPercent => Math.Clamp(100d - UsedPercent, 0d, 100d);
 }
@@ -16,6 +17,14 @@ public sealed record ProviderQuota(
     string? Error = null)
 {
     public bool IsAvailable => string.IsNullOrWhiteSpace(Error) && Windows.Count > 0;
+
+    /// <summary>Plan-wide windows such as the 5-hour and 7-day allowances.</summary>
+    public IReadOnlyList<QuotaWindow> StandardWindows =>
+        Windows.Where(window => !window.IsModelScoped).ToList();
+
+    /// <summary>Per-model-family weekly allowances (for example the shared Fable bucket).</summary>
+    public IReadOnlyList<QuotaWindow> ModelScopedWindows =>
+        Windows.Where(window => window.IsModelScoped).ToList();
 
     public static ProviderQuota Failed(string provider, string error) =>
         new(provider, string.Empty, Array.Empty<QuotaWindow>(), null, error);

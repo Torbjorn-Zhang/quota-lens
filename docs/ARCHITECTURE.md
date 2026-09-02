@@ -35,7 +35,7 @@ flowchart LR
 4. UI 只接收额度百分比、重置时间、方案与友好错误。
 5. 设置文件不包含 token、响应正文或账户 ID。
 
-Claude 解析器会读取常规的 5 小时、7 天窗口，也会从 `limits[]` 中识别 `weekly_scoped` 模型额度。存在多个模型额度时优先显示 Fable；没有模型专项额度时，额外界面行保持隐藏。
+Claude 解析器会读取常规的 5 小时、7 天窗口，也会从 `limits[]` 中识别 `weekly_scoped` 模型额度。每个模型家族（按 `scope.model.display_name` 去重）各占一行，Fable 排在最前；usage 接口目前用同一个 "Fable" 桶覆盖 Fable 5 与 Fable 5.1（`model.id` 为 null），若上游拆成多个桶，界面会自动新增行。没有模型专项额度时，额外界面行保持隐藏。
 
 ## 运行策略
 

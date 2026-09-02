@@ -157,12 +157,153 @@ Run("Claude Fable scoped quota parser", () =>
     }");
 
     var quota = QuotaService.ParseClaude(json.RootElement);
-    Equal(3, quota.Windows.Count);
+    Equal(4, quota.Windows.Count);
+    Equal(2, quota.StandardWindows.Count);
+    Equal(2, quota.ModelScopedWindows.Count);
+    Equal(false, quota.Windows[0].IsModelScoped);
+    Equal(false, quota.Windows[1].IsModelScoped);
     Equal("Fable 周额度", quota.Windows[2].Name);
+    Equal(true, quota.Windows[2].IsModelScoped);
     Equal(46d, quota.Windows[2].RemainingPercent);
     Equal(
         DateTimeOffset.Parse("2026-07-28T16:30:00+00:00"),
         quota.Windows[2].ResetsAt);
+    Equal("Opus 周额度", quota.Windows[3].Name);
+    Equal(28d, quota.Windows[3].RemainingPercent);
+});
+
+Run("Claude Fable family bucket shared by Fable 5 and 5.1", () =>
+{
+    // Shape observed live on 2026-09-02, after the Fable 5.1 launch: one family-level "Fable"
+    // scope with a null model id, next to non-scoped session and weekly_all entries.
+    using var json = JsonDocument.Parse(@"{
+      ""five_hour"": { ""utilization"": 6.0, ""resets_at"": ""2026-09-02T09:00:00.934244+00:00"" },
+      ""seven_day"": { ""utilization"": 1.0, ""resets_at"": ""2026-09-05T06:00:00.934269+00:00"" },
+      ""seven_day_opus"": null,
+      ""seven_day_sonnet"": null,
+      ""limits"": [
+        { ""kind"": ""session"", ""percent"": 6, ""resets_at"": ""2026-09-02T09:00:00.934244+00:00"",
+          ""scope"": null, ""is_active"": true },
+        { ""kind"": ""weekly_all"", ""percent"": 1, ""resets_at"": ""2026-09-05T06:00:00.934269+00:00"",
+          ""scope"": null, ""is_active"": false },
+        { ""kind"": ""weekly_scoped"", ""percent"": 2, ""resets_at"": ""2026-09-05T06:00:00.934492+00:00"",
+          ""scope"": { ""model"": { ""id"": null, ""display_name"": ""Fable"" }, ""surface"": null },
+          ""is_active"": false }
+      ]
+    }");
+
+    var quota = QuotaService.ParseClaude(json.RootElement);
+    Equal(3, quota.Windows.Count);
+    Equal(2, quota.StandardWindows.Count);
+    Equal(1, quota.ModelScopedWindows.Count);
+    Equal("Fable 周额度", quota.ModelScopedWindows[0].Name);
+    Equal(98d, quota.ModelScopedWindows[0].RemainingPercent);
+    Equal(
+        DateTimeOffset.Parse("2026-09-05T06:00:00.934492+00:00"),
+        quota.ModelScopedWindows[0].ResetsAt);
+});
+
+Run("Split Fable buckets render as separate rows", () =>
+{
+    // Hypothetical upstream change: Fable 5 and Fable 5.1 get their own buckets. Both must appear,
+    // Fable-family rows first, without any parser change.
+    using var json = JsonDocument.Parse(@"{
+      ""five_hour"": { ""utilization"": 10, ""resets_at"": ""2026-09-02T09:00:00+00:00"" },
+      ""seven_day"": { ""utilization"": 20, ""resets_at"": ""2026-09-05T06:00:00+00:00"" },
+      ""limits"": [
+        { ""kind"": ""weekly_scoped"", ""percent"": 40, ""resets_at"": ""2026-09-05T06:00:00+00:00"",
+          ""scope"": { ""model"": { ""id"": ""claude-opus-5"", ""display_name"": ""Opus"" } }, ""is_active"": true },
+        { ""kind"": ""weekly_scoped"", ""percent"": 30, ""resets_at"": ""2026-09-05T06:00:00+00:00"",
+          ""scope"": { ""model"": { ""id"": ""claude-fable-5-1"", ""display_name"": ""Fable 5.1"" } }, ""is_active"": false },
+        { ""kind"": ""weekly_scoped"", ""percent"": 10, ""resets_at"": ""2026-09-05T06:00:00+00:00"",
+          ""scope"": { ""model"": { ""id"": ""claude-fable-5"", ""display_name"": ""Fable 5"" } }, ""is_active"": false }
+      ]
+    }");
+
+    var quota = QuotaService.ParseClaude(json.RootElement);
+    var scoped = quota.ModelScopedWindows;
+    Equal(3, scoped.Count);
+    Equal("Fable 5.1 周额度", scoped[0].Name);
+    Equal(70d, scoped[0].RemainingPercent);
+    Equal("Fable 5 周额度", scoped[1].Name);
+    Equal(90d, scoped[1].RemainingPercent);
+    Equal("Opus 周额度", scoped[2].Name);
+    Equal(60d, scoped[2].RemainingPercent);
+});
+
+Run("Duplicate scoped buckets collapse to the most used entry", () =>
+{
+    using var json = JsonDocument.Parse(@"{
+      ""five_hour"": { ""utilization"": 10, ""resets_at"": ""2026-09-02T09:00:00+00:00"" },
+      ""seven_day"": { ""utilization"": 20, ""resets_at"": ""2026-09-05T06:00:00+00:00"" },
+      ""limits"": [
+        { ""kind"": ""weekly_scoped"", ""percent"": 35, ""resets_at"": ""2026-09-05T06:00:00+00:00"",
+          ""scope"": { ""model"": { ""display_name"": ""fable"" }, ""surface"": ""cowork"" }, ""is_active"": false },
+        { ""kind"": ""weekly_scoped"", ""percent"": 20, ""resets_at"": ""2026-09-06T06:00:00+00:00"",
+          ""scope"": { ""model"": { ""display_name"": ""Fable"" }, ""surface"": ""claude_code"" }, ""is_active"": true }
+      ]
+    }");
+
+    var quota = QuotaService.ParseClaude(json.RootElement);
+    Equal(1, quota.ModelScopedWindows.Count);
+    // Casing is chosen deterministically (ordinal minimum), not by array order.
+    Equal("Fable 周额度", quota.ModelScopedWindows[0].Name);
+    // Percent and reset time come from the most used duplicate even when it is not the active one.
+    Equal(65d, quota.ModelScopedWindows[0].RemainingPercent);
+    Equal(
+        DateTimeOffset.Parse("2026-09-05T06:00:00+00:00"),
+        quota.ModelScopedWindows[0].ResetsAt);
+});
+
+Run("Scoped families order by activity, usage, then name", () =>
+{
+    using var json = JsonDocument.Parse(@"{
+      ""five_hour"": { ""utilization"": 10, ""resets_at"": ""2026-09-02T09:00:00+00:00"" },
+      ""seven_day"": { ""utilization"": 20, ""resets_at"": ""2026-09-05T06:00:00+00:00"" },
+      ""limits"": [
+        { ""kind"": ""weekly_scoped"", ""percent"": 60, ""resets_at"": ""2026-09-05T06:00:00+00:00"",
+          ""scope"": { ""model"": { ""display_name"": ""Opus"" } }, ""is_active"": false },
+        { ""kind"": ""weekly_scoped"", ""percent"": 20, ""resets_at"": ""2026-09-05T06:00:00+00:00"",
+          ""scope"": { ""model"": { ""display_name"": ""Sonnet"" } }, ""is_active"": true },
+        { ""kind"": ""weekly_scoped"", ""percent"": 20, ""resets_at"": ""2026-09-05T06:00:00+00:00"",
+          ""scope"": { ""model"": { ""display_name"": ""Haiku"" } }, ""is_active"": true },
+        { ""kind"": ""weekly_scoped"", ""percent"": 30, ""resets_at"": ""2026-09-05T06:00:00+00:00"",
+          ""scope"": { ""model"": { ""id"": ""claude-fable-5-1"", ""display_name"": """" } }, ""is_active"": false }
+      ]
+    }");
+
+    var scoped = QuotaService.ParseClaude(json.RootElement).ModelScopedWindows;
+    Equal(4, scoped.Count);
+    // Blank display_name falls back to the model id; the id still counts as Fable family and sorts first.
+    Equal("claude-fable-5-1 周额度", scoped[0].Name);
+    // Active buckets beat inactive ones regardless of usage; equal usage falls back to name order.
+    Equal("Haiku 周额度", scoped[1].Name);
+    Equal("Sonnet 周额度", scoped[2].Name);
+    Equal("Opus 周额度", scoped[3].Name);
+});
+
+Run("Raw usage dump masks identifiers", () =>
+{
+    using var json = JsonDocument.Parse(@"{
+      ""email"": ""a@b.c"",
+      ""organization"": { ""name"": ""Org"", ""display_name"": ""Person"" },
+      ""limits"": [
+        { ""kind"": ""weekly_scoped"", ""percent"": 2, ""resets_at"": ""2026-09-05T06:00:00+00:00"",
+          ""scope"": { ""model"": { ""id"": ""claude-fable-5"", ""display_name"": ""Fable"" } } }
+      ]
+    }");
+
+    var dump = RawUsageDump.Describe(json.RootElement);
+    Contains("\"<string len=5>\"", dump);
+    Contains("\"<string len=3>\"", dump);
+    Contains("\"<string len=6>\"", dump);
+    Contains("\"weekly_scoped\"", dump);
+    Contains("\"2026-09-05T06:00:00+00:00\"", dump);
+    Contains("\"claude-fable-5\"", dump);
+    Contains("\"Fable\"", dump);
+    Equal(false, dump.Contains("a@b.c", StringComparison.Ordinal));
+    Equal(false, dump.Contains("Org", StringComparison.Ordinal));
+    Equal(false, dump.Contains("Person", StringComparison.Ordinal));
 });
 
 Run("Missing windows fail clearly", () =>
@@ -276,6 +417,18 @@ Run("Low quota alerts are coalesced and persisted", () =>
 if (args.Contains("--live", StringComparer.OrdinalIgnoreCase))
 {
     await RunLiveAsync();
+}
+
+if (args.Contains("--raw-usage", StringComparer.OrdinalIgnoreCase))
+{
+    try
+    {
+        await RawUsageDump.RunAsync();
+    }
+    catch (Exception ex)
+    {
+        failures.Add($"Raw usage dump: {ex.GetType().Name}: {ex.Message}");
+    }
 }
 
 if (args.Contains("--desktop-shape", StringComparer.OrdinalIgnoreCase))
