@@ -9,7 +9,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>QuotaLens</AssemblyName>
     <RootNamespace>QuotaLens</RootNamespace>
-    <Version>0.3.3</Version>
+    <Version>0.4.6</Version>
   </PropertyGroup>
 
   <ItemGroup>

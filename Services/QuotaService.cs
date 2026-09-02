@@ -11,10 +11,12 @@ public sealed class QuotaService : IDisposable
     private const string CodexUsageUrl = "https://chatgpt.com/backend-api/wham/usage";
     private const string ClaudeUsageUrl = "https://api.anthropic.com/api/oauth/usage";
     private static readonly TimeSpan ClaudeRefreshInterval = TimeSpan.FromMinutes(3);
+    internal const string WeeklyScopedSuffix = " 周额度";
     private readonly HttpClient _httpClient;
     private ProviderQuota? _lastClaudeQuota;
     private DateTimeOffset _nextClaudeFetch = DateTimeOffset.MinValue;
     private TimeSpan _claudeBackoff = TimeSpan.FromMinutes(5);
+    private bool _claudeRateLimited;
 
     public QuotaService()
     {
@@ -25,10 +27,12 @@ public sealed class QuotaService : IDisposable
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("QuotaLens/0.1 Windows");
     }
 
-    public async Task<QuotaSnapshot> FetchAsync(CancellationToken cancellationToken)
+    public async Task<QuotaSnapshot> FetchAsync(
+        CancellationToken cancellationToken,
+        bool forceClaudeRefresh = false)
     {
         var codexTask = FetchCodexSafeAsync(cancellationToken);
-        var claudeTask = FetchClaudeManagedAsync(cancellationToken);
+        var claudeTask = FetchClaudeManagedAsync(cancellationToken, forceClaudeRefresh);
         await Task.WhenAll(codexTask, claudeTask);
         return new QuotaSnapshot(await codexTask, await claudeTask, DateTimeOffset.Now);
     }
@@ -56,10 +60,12 @@ public sealed class QuotaService : IDisposable
         }
     }
 
-    private async Task<ProviderQuota> FetchClaudeManagedAsync(CancellationToken cancellationToken)
+    private async Task<ProviderQuota> FetchClaudeManagedAsync(
+        CancellationToken cancellationToken,
+        bool forceRefresh)
     {
         var now = DateTimeOffset.Now;
-        if (now < _nextClaudeFetch)
+        if (now < _nextClaudeFetch && (!forceRefresh || _claudeRateLimited))
         {
             if (_lastClaudeQuota is not null) return _lastClaudeQuota;
             var wait = FormatRetryWait(_nextClaudeFetch - now);
@@ -77,10 +83,14 @@ public sealed class QuotaService : IDisposable
             await EnsureSuccessAsync(response, "Claude", cancellationToken);
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             using var json = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-            var quota = ParseClaude(json.RootElement);
+            var quota = ParseClaude(json.RootElement) with
+            {
+                Plan = FormatClaudePlan(credential.SubscriptionType, credential.RateLimitTier)
+            };
             _lastClaudeQuota = quota;
             _nextClaudeFetch = now + ClaudeRefreshInterval;
             _claudeBackoff = TimeSpan.FromMinutes(5);
+            _claudeRateLimited = false;
             return quota;
         }
         catch (QuotaRateLimitException ex)
@@ -89,6 +99,7 @@ public sealed class QuotaService : IDisposable
             var wait = serverWait > _claudeBackoff ? serverWait : _claudeBackoff;
             _nextClaudeFetch = DateTimeOffset.Now + wait;
             _claudeBackoff = TimeSpan.FromMinutes(Math.Min(30, _claudeBackoff.TotalMinutes * 2));
+            _claudeRateLimited = true;
 
             var status = $"Claude 查询暂时限流，保留上次数据 · {FormatRetryWait(wait)}后重试";
             if (_lastClaudeQuota is not null)
@@ -140,6 +151,7 @@ public sealed class QuotaService : IDisposable
         var windows = new List<QuotaWindow>();
         AddClaudeWindow(windows, root, "five_hour", "5 小时");
         AddClaudeWindow(windows, root, "seven_day", "7 天");
+        AddClaudeScopedWindows(windows, root);
 
         if (windows.Count == 0)
         {
@@ -166,6 +178,23 @@ public sealed class QuotaService : IDisposable
             "Claude 订阅",
             windows,
             modelParts.Count > 0 ? string.Join(" · ", modelParts) : null);
+    }
+
+    internal static string FormatClaudePlan(string? subscriptionType, string? rateLimitTier)
+    {
+        var tier = rateLimitTier?.Trim().ToLowerInvariant();
+        if (tier?.Contains("max_20x", StringComparison.Ordinal) == true) return "Max 20×";
+        if (tier?.Contains("max_5x", StringComparison.Ordinal) == true) return "Max 5×";
+
+        return subscriptionType?.Trim().ToLowerInvariant() switch
+        {
+            "max" => "Max",
+            "pro" => "Pro",
+            "team" => "Team",
+            "enterprise" => "Enterprise",
+            "free" => "Free",
+            _ => "Claude 订阅"
+        };
     }
 
     private static void AddCodexWindow(
@@ -199,6 +228,84 @@ public sealed class QuotaService : IDisposable
         var used = GetNumber(window, "utilization");
         if (used is null) return;
         result.Add(new QuotaWindow(name, used.Value, GetDateTime(window, "resets_at")));
+    }
+
+    /// <summary>
+    /// Adds one window per model family found in <c>limits[]</c> (<c>kind == "weekly_scoped"</c>).
+    /// The usage API reports these buckets per family rather than per model: as of 2026-09-02 a single
+    /// "Fable" scope (with a null <c>model.id</c>) covers both Fable 5 and Fable 5.1. Every family is
+    /// surfaced so that an upstream split into separate buckets shows up as an extra row automatically.
+    /// Entries that share a display name (for example per-surface duplicates) collapse into the most
+    /// used one, which is the conservative reading for a remaining-percentage display.
+    /// </summary>
+    private static void AddClaudeScopedWindows(
+        ICollection<QuotaWindow> result,
+        JsonElement root)
+    {
+        if (!root.TryGetProperty("limits", out var limits)
+            || limits.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        var candidates = new List<(string Name, double Used, DateTimeOffset? ResetsAt, bool IsActive)>();
+        foreach (var limit in limits.EnumerateArray())
+        {
+            if (limit.ValueKind != JsonValueKind.Object
+                || !string.Equals(GetString(limit, "kind"), "weekly_scoped", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var used = GetNumber(limit, "percent") ?? GetNumber(limit, "utilization");
+            if (used is null
+                || !TryObject(limit, "scope", out var scope)
+                || !TryObject(scope, "model", out var model))
+            {
+                continue;
+            }
+
+            var displayName = GetString(model, "display_name");
+            if (string.IsNullOrWhiteSpace(displayName)) displayName = GetString(model, "id");
+            if (string.IsNullOrWhiteSpace(displayName)) continue;
+
+            candidates.Add((
+                displayName.Trim(),
+                used.Value,
+                GetDateTime(limit, "resets_at"),
+                GetBoolean(limit, "is_active") == true));
+        }
+
+        var families = candidates
+            .GroupBy(candidate => candidate.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+            {
+                var mostUsed = group
+                    .OrderByDescending(candidate => candidate.Used)
+                    .ThenByDescending(candidate => candidate.IsActive)
+                    .ThenBy(candidate => candidate.Name, StringComparer.Ordinal)
+                    .First();
+                return (
+                    // Pick the casing deterministically; GroupBy's Key would follow array order.
+                    Name: group.Select(candidate => candidate.Name).OrderBy(name => name, StringComparer.Ordinal).First(),
+                    mostUsed.Used,
+                    mostUsed.ResetsAt,
+                    IsActive: group.Any(candidate => candidate.IsActive));
+            })
+            .OrderByDescending(family =>
+                family.Name.Contains("Fable", StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(family => family.IsActive)
+            .ThenByDescending(family => family.Used)
+            .ThenBy(family => family.Name, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var family in families)
+        {
+            result.Add(new QuotaWindow(
+                family.Name + WeeklyScopedSuffix,
+                family.Used,
+                family.ResetsAt,
+                IsModelScoped: true));
+        }
     }
 
     private static void AddClaudeModelInfo(

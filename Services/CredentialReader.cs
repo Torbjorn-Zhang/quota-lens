@@ -8,7 +8,10 @@ namespace QuotaLens.Services;
 internal static class CredentialReader
 {
     internal sealed record CodexCredential(string AccessToken, string AccountId);
-    internal sealed record ClaudeCredential(string AccessToken);
+    internal sealed record ClaudeCredential(
+        string AccessToken,
+        string? SubscriptionType = null,
+        string? RateLimitTier = null);
 
     public static async Task<CodexCredential> ReadCodexAsync(CancellationToken cancellationToken)
     {
@@ -36,6 +39,7 @@ internal static class CredentialReader
 
     public static async Task<ClaudeCredential> ReadClaudeAsync(CancellationToken cancellationToken)
     {
+        var accountMetadata = await ReadClaudeAccountMetadataAsync(cancellationToken);
         var configured = Environment.GetEnvironmentVariable("CLAUDE_CONFIG_DIR");
         var directory = string.IsNullOrWhiteSpace(configured)
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude")
@@ -52,12 +56,19 @@ internal static class CredentialReader
 
             if (!string.IsNullOrWhiteSpace(fileToken))
             {
-                return new ClaudeCredential(fileToken);
+                var subscriptionType = accountMetadata.SubscriptionType
+                                       ?? GetString(root, "claudeAiOauth", "subscriptionType")
+                                       ?? GetString(root, "oauthAccount", "subscriptionType");
+                var rateLimitTier = accountMetadata.RateLimitTier
+                                    ?? GetString(root, "claudeAiOauth", "rateLimitTier")
+                                    ?? GetString(root, "oauthAccount", "rateLimitTier");
+                return new ClaudeCredential(fileToken, subscriptionType, rateLimitTier);
             }
         }
 
         var desktopCache = await ReadClaudeDesktopCacheAsync(cancellationToken);
-        var token = FindClaudeDesktopToken(desktopCache)
+        var desktopCredential = FindClaudeDesktopCredential(desktopCache);
+        var token = desktopCredential?.AccessToken
                     ?? FindStringByPropertyName(desktopCache, "accessToken")
                     ?? FindStringByPropertyName(desktopCache, "access_token")
                     ?? FindStringByPropertyName(desktopCache, "oauthAccessToken");
@@ -67,7 +78,33 @@ internal static class CredentialReader
             throw new QuotaException("已找到 Claude 桌面版登录态，但其中没有可用的 Claude Code OAuth 凭据。");
         }
 
-        return new ClaudeCredential(token);
+        return new ClaudeCredential(
+            token,
+            accountMetadata.SubscriptionType ?? desktopCredential?.SubscriptionType,
+            accountMetadata.RateLimitTier ?? desktopCredential?.RateLimitTier);
+    }
+
+    private static async Task<ClaudeAccountMetadata> ReadClaudeAccountMetadataAsync(
+        CancellationToken cancellationToken)
+    {
+        var path = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            ".claude.json");
+        if (!File.Exists(path)) return new ClaudeAccountMetadata(null, null);
+
+        try
+        {
+            using var document = await ReadJsonAsync(path, string.Empty, cancellationToken);
+            var root = document.RootElement;
+            return new ClaudeAccountMetadata(
+                GetString(root, "oauthAccount", "subscriptionType"),
+                GetString(root, "oauthAccount", "organizationRateLimitTier")
+                ?? GetString(root, "oauthAccount", "userRateLimitTier"));
+        }
+        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
+        {
+            return new ClaudeAccountMetadata(null, null);
+        }
     }
 
     internal static async Task<JsonElement> ReadClaudeDesktopCacheAsync(CancellationToken cancellationToken)
@@ -210,10 +247,14 @@ internal static class CredentialReader
     }
 
     internal static string? FindClaudeDesktopToken(JsonElement root)
+        => FindClaudeDesktopCredential(root)?.AccessToken
+           ?? FindStringByPropertyName(root, "token");
+
+    internal static ClaudeCredential? FindClaudeDesktopCredential(JsonElement root)
     {
         if (root.ValueKind != JsonValueKind.Object) return null;
 
-        string? bestToken = null;
+        ClaudeCredential? bestCredential = null;
         long bestExpiry = long.MinValue;
         foreach (var entry in root.EnumerateObject())
         {
@@ -235,15 +276,20 @@ internal static class CredentialReader
                 expiryElement.TryGetInt64(out expiry);
             }
 
-            if (bestToken is null || expiry > bestExpiry)
+            if (bestCredential is null || expiry > bestExpiry)
             {
-                bestToken = token;
+                bestCredential = new ClaudeCredential(
+                    token,
+                    GetString(entry.Value, "subscriptionType"),
+                    GetString(entry.Value, "rateLimitTier"));
                 bestExpiry = expiry;
             }
         }
 
-        return bestToken ?? FindStringByPropertyName(root, "token");
+        return bestCredential;
     }
+
+    private sealed record ClaudeAccountMetadata(string? SubscriptionType, string? RateLimitTier);
 
     private static async Task<JsonDocument> ReadJsonAsync(
         string path,
