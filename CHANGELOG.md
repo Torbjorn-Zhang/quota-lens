@@ -6,14 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
-### Fixed / 修复
-
-- The whole header band now drags the widget, including the frame border, the top padding, and the gaps between header controls; previously the outermost strip was dead / 整个标题带都可拖动小组件，包括边框、顶部内边距和标题控件之间的空隙；此前最顶上的一小段无法拖动
-
 ### Planned / 计划
 
 - In-app language switching / 应用内语言切换
 - Signed installer and update channel / 签名安装包与更新通道
+
+## [0.4.7] - 2026-09-04
+
+### Fixed / 修复
+
+- The whole header band now drags the widget, including the frame border, the top padding, and the gaps between header controls; previously the outermost strip was dead / 整个标题带都可拖动小组件，包括边框、顶部内边距和标题控件之间的空隙；此前最顶上的一小段无法拖动
 
 ## [0.4.6] - 2026-09-02
 
@@ -74,6 +76,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - Initial Codex and Claude Code quota monitoring / 初始 Codex 与 Claude Code 额度监控
 
-[Unreleased]: https://github.com/Torbjorn-Zhang/quota-lens/compare/v0.4.6...HEAD
+[Unreleased]: https://github.com/Torbjorn-Zhang/quota-lens/compare/v0.4.7...HEAD
+[0.4.7]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.4.7
 [0.4.6]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.4.6
 [0.3.3]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.3.3
