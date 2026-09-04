@@ -516,9 +516,14 @@ public partial class MainWindow : Window
         NativePower.SetThreadExecutionState(NativePower.ExecutionState.Continuous);
     }
 
-    private void WidgetHeader_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    /// <summary>
+    /// Drag handling lives on the glass frame rather than on the header grid so that the frame's
+    /// border, its top padding, and the empty gaps between header controls all count as the drag
+    /// zone. Buttons mark the event handled themselves, so clicks on them never reach this handler.
+    /// </summary>
+    private void GlassFrame_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.LeftButton != MouseButtonState.Pressed) return;
+        if (e.LeftButton != MouseButtonState.Pressed || !IsInHeaderBand(e)) return;
         try
         {
             DragMove();
@@ -528,6 +533,18 @@ public partial class MainWindow : Window
         {
             // The mouse button may be released before DragMove starts.
         }
+    }
+
+    /// <summary>
+    /// The drag zone spans from the very top edge of the glass frame down to the bottom of the
+    /// header row, so the outermost strip is no longer dead while the cards below stay inert.
+    /// </summary>
+    private bool IsInHeaderBand(MouseButtonEventArgs e)
+    {
+        var headerBottom = WidgetHeader
+            .TranslatePoint(new System.Windows.Point(0, WidgetHeader.ActualHeight), GlassFrame)
+            .Y;
+        return e.GetPosition(GlassFrame).Y <= headerBottom;
     }
 
     private void Window_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e) =>

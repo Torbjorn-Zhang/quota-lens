@@ -95,7 +95,8 @@
 
     <Grid Margin="16">
         <Border x:Name="GlassFrame" Background="{StaticResource GlassBrush}"
-                BorderBrush="#38FFFFFF" BorderThickness="1" CornerRadius="24">
+                BorderBrush="#38FFFFFF" BorderThickness="1" CornerRadius="24"
+                MouseLeftButtonDown="GlassFrame_MouseLeftButtonDown">
             <Border.Effect>
                 <DropShadowEffect Color="#000000" BlurRadius="28" ShadowDepth="7" Opacity="0.55" />
             </Border.Effect>
@@ -107,7 +108,7 @@
                     <RowDefinition Height="22" />
                 </Grid.RowDefinitions>
 
-                <Grid x:Name="WidgetHeader" MouseLeftButtonDown="WidgetHeader_MouseLeftButtonDown">
+                <Grid x:Name="WidgetHeader">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
