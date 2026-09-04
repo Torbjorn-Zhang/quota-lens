@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Fixed / 修复
+
+- The whole header band now drags the widget, including the frame border, the top padding, and the gaps between header controls; previously the outermost strip was dead / 整个标题带都可拖动小组件，包括边框、顶部内边距和标题控件之间的空隙；此前最顶上的一小段无法拖动
+
 ### Planned / 计划
 
 - In-app language switching / 应用内语言切换
