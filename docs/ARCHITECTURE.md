@@ -15,7 +15,9 @@ flowchart LR
     QS --> AN[Anthropic 额度服务]
     UI --> SS[SettingsService]
     SS --> FS[本地 settings.json]
-    SS --> REG[当前用户 Run 注册表项]
+    SS --> TASK[当前用户登录计划任务]
+    SS -.回退.-> REG[当前用户 Run 注册表项]
+    SS --> LOG[本地 startup.log]
 ```
 
 ## 组件
@@ -23,7 +25,9 @@ flowchart LR
 - `MainWindow.xaml(.cs)`：窗口、托盘、通知、倒计时、息屏和系统保持唤醒。
 - `QuotaService.cs`：HTTP 请求、响应解析、Claude 限流退避和错误归一化。
 - `CredentialReader.cs`：只读发现 Codex/Claude 登录状态，并在内存中解锁 Claude Desktop 安全存储。
-- `SettingsService.cs`：保存非敏感界面设置并管理当前用户的开机启动项。
+- `SettingsService.cs`：保存非敏感界面设置并管理开机启动。启用时注册当前用户的 Task Scheduler 登录任务（延迟 5 秒、交互令牌、不提权）并清除旧的 Run 注册表值；Task Scheduler 不可用时回退到 Run 值。
+- `LogonTask.cs`：通过 `Schedule.Service` COM 接口（后期绑定，无需 interop 程序集）创建、删除和查询登录任务。
+- `StartupLog.cs`：追加式本地诊断日志 `startup.log`，记录启动、退出、自启注册与未处理错误，只含时间、版本、参数和简短信息，保留最近 200 行。
 - `tests/QuotaLens.Tests`：使用合成 JSON 和临时加密样本验证解析与凭据选择，不需要真实账号。
 
 ## 数据流原则

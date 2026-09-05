@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added / 新增
+
+- Local `startup.log` next to `settings.json` records start, exit, autostart registration and unhandled errors (timestamps, version, arguments and short messages only; last 200 lines) / 在 `settings.json` 旁新增本地 `startup.log`，记录启动、退出、自启注册与未处理错误（仅时间、版本、参数和简短信息，保留最近 200 行）
+
+### Changed / 变更
+
+- "Start with Windows" now registers a per-user Task Scheduler logon task (5-second delay, interactive token, no elevation) instead of a Run registry value, which Windows 11 Explorer was observed to skip silently at sign-in; the Run value is removed on upgrade and only used as a fallback when Task Scheduler is unavailable / “开机启动”改为注册当前用户的 Task Scheduler 登录任务（延迟 5 秒、交互令牌、不提权），不再写 Run 注册表值；实测 Windows 11 的 Explorer 会在登录时静默跳过该值。升级后自动清除旧的 Run 值，仅在 Task Scheduler 不可用时回退
+
 ### Planned / 计划
 
 - In-app language switching / 应用内语言切换

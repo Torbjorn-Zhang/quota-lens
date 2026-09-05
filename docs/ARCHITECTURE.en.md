@@ -15,7 +15,9 @@ flowchart LR
     QS --> AN[Anthropic usage service]
     UI --> SS[SettingsService]
     SS --> FS[Local settings.json]
-    SS --> REG[Current-user Run key]
+    SS --> TASK[Current-user logon task]
+    SS -.fallback.-> REG[Current-user Run key]
+    SS --> LOG[Local startup.log]
 ```
 
 ## Components
@@ -23,7 +25,9 @@ flowchart LR
 - `MainWindow.xaml(.cs)`: window, tray, notifications, countdowns, display power, and system-awake behavior.
 - `QuotaService.cs`: HTTP calls, response parsing, Claude rate-limit backoff, and friendly error mapping.
 - `CredentialReader.cs`: read-only discovery of Codex/Claude login state and in-memory Claude Desktop safe-storage decryption.
-- `SettingsService.cs`: non-sensitive UI settings and the current-user startup registry entry.
+- `SettingsService.cs`: non-sensitive UI settings and launch at sign-in. When enabled it registers a per-user Task Scheduler logon task (5-second delay, interactive token, no elevation) and removes any legacy Run value; the Run value is only a fallback when Task Scheduler is unavailable.
+- `LogonTask.cs`: creates, deletes, and describes the logon task through the `Schedule.Service` COM API via late binding, so no interop assembly is needed.
+- `StartupLog.cs`: append-only local diagnostics in `startup.log` (start, exit, autostart registration, unhandled errors) with timestamps, version, arguments, and short messages only; trimmed to the last 200 lines.
 - `tests/QuotaLens.Tests`: synthetic JSON and temporary encrypted fixtures; no real account is needed.
 
 ## Data-flow rules

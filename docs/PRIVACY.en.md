@@ -16,10 +16,12 @@ English | [简体中文](PRIVACY.md)
 
 ## Local storage
 
-`%LOCALAPPDATA%\QuotaLens\settings.json` stores only the refresh interval, launch-at-sign-in preference, always-on-top state, opacity, and window position. When launch at sign-in is enabled, the executable path is stored in the current user's Windows `Run` registry key.
+`%LOCALAPPDATA%\QuotaLens\settings.json` stores only the refresh interval, launch-at-sign-in preference, always-on-top state, opacity, and window position. When launch at sign-in is enabled, a per-user Task Scheduler logon task named `QuotaLens` stores the executable path; the current user's `Run` registry key is used only as a fallback when Task Scheduler is unavailable.
+
+`%LOCALAPPDATA%\QuotaLens\startup.log` records start, exit, autostart registration results, and unhandled errors. Each line holds only a timestamp, the version, launch arguments, and a short message; the last 200 lines are kept.
 
 OAuth tokens, raw usage responses, and account IDs are never written to Quota Lens files or logs. Decrypted Claude Desktop tokens and master keys exist only in process memory, and their byte buffers are zeroed after use.
 
 ## Removing data
 
-Exit Quota Lens and delete `%LOCALAPPDATA%\QuotaLens` to remove its settings. Disable launch at sign-in from the tray menu to remove the registry entry. Neither action deletes Claude or Codex sign-in data.
+Exit Quota Lens and delete `%LOCALAPPDATA%\QuotaLens` to remove its settings and log. Disable launch at sign-in from the tray menu to remove the logon task (and any legacy registry entry). Neither action deletes Claude or Codex sign-in data.
