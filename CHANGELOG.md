@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added / 新增
+
+- macOS menu bar app (Apple Silicon and Intel, macOS 11+): the menu bar icon shows Codex and Claude as two sets of concentric rings; the menu lists every quota window with its remaining percentage and reset time and offers the ring panel with live countdowns, refresh, display-off-while-awake, launch at login (a per-user LaunchAgent), and low-quota notifications. Released as ad-hoc signed `QuotaLens-*-macos-arm64.zip` / `-x64.zip` / 新增 macOS 菜单栏应用（Apple Silicon 与 Intel，macOS 11 及以上）：菜单栏图标用两组同心圆显示 Codex 与 Claude；菜单逐行列出各额度窗口的剩余百分比与重置时间，并提供同心圆详情面板（实时倒计时）、刷新、息屏保持运行、登录时启动（当前用户 LaunchAgent）和低额度通知。以临时签名的 `QuotaLens-*-macos-arm64.zip` / `-x64.zip` 发布
+- macOS credential support: Claude Desktop's safe-storage cache is decrypted with the “Claude Safe Storage” keychain password (Chromium's macOS scheme), and the Claude Code CLI's “Claude Code-credentials” keychain item is read; keychain prompts never stall the other provider's refresh / 支持 macOS 凭据：用钥匙串“Claude Safe Storage”密码按 Chromium 的 macOS 方案解密 Claude 桌面版缓存，并读取 Claude Code 命令行的“Claude Code-credentials”钥匙串项；等待钥匙串授权时不影响另一个服务的刷新
+
+### Changed / 变更
+
+- Quota logic moved into a cross-platform `src/QuotaLens.Core` library shared by the Windows (WPF) and macOS (Avalonia) apps; the parser checks now run on both Windows and macOS CI, and releases include the macOS builds / 额度逻辑移入跨平台的 `src/QuotaLens.Core`，由 Windows（WPF）与 macOS（Avalonia）两端共用；解析器测试在 Windows 与 macOS CI 上都会运行，发布包含 macOS 版本
+
 ### Planned / 计划
 
 - In-app language switching / 应用内语言切换

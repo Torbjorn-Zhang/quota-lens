@@ -6,7 +6,7 @@
 [![Release](https://img.shields.io/github/v/release/Torbjorn-Zhang/quota-lens?display_name=tag)](https://github.com/Torbjorn-Zhang/quota-lens/releases)
 [![License](https://img.shields.io/github/license/Torbjorn-Zhang/quota-lens)](LICENSE)
 
-Quota Lens 是一个轻量、透明的 Windows 桌面小组件，用于实时查看 **Claude Code** 与 **Codex** 的订阅额度、重置时间和剩余比例。
+Quota Lens 是一个轻量的额度小工具，用于实时查看 **Claude Code** 与 **Codex** 的订阅额度、重置时间和剩余比例。Windows 上是透明桌面小组件（可贴边成侧栏），macOS 上是菜单栏应用。
 
 ![Quota Lens 预览](docs/images/preview.png)
 
@@ -26,17 +26,20 @@ Quota Lens 是一个轻量、透明的 Windows 桌面小组件，用于实时查
 - 贴边侧栏：拖到屏幕左/右边缘后收成一条竖条，用同心圆和重置时间展示全部额度，鼠标停上去弹出完整面板，移开自动收回
 - 一键关闭所有显示器，同时阻止系统自动睡眠；鼠标或键盘即可唤醒屏幕
 - 可选随 Windows 登录自动启动
+- macOS 菜单栏版：菜单栏图标用两组迷你同心圆显示 Codex 与 Claude 额度，点开菜单即可看到每个额度窗口的剩余百分比和重置时间，也可打开同款深色面板
 - 不保存 OAuth token，不记录请求或凭据日志
 
 ## 系统要求
 
-- Windows 10 或 Windows 11（x64）
+- Windows 10 或 Windows 11（x64），或 macOS 11 及以上（Apple Silicon 或 Intel）
 - 已使用 ChatGPT 账号登录 Codex
-- 已使用 Claude 订阅账号登录 Claude Code，或已登录 Microsoft Store 版 Claude Desktop
+- 已使用 Claude 订阅账号登录 Claude Code，或已登录 Claude Desktop（Windows 上为 Microsoft Store 版）
 
 API key、Bedrock、Vertex 等按量计费账号通常没有相同的订阅额度百分比，因此不在支持范围内。
 
 ## 安装
+
+### Windows
 
 1. 从 [Releases](https://github.com/Torbjorn-Zhang/quota-lens/releases) 下载最新的 `QuotaLens-*-win-x64.zip`。
 2. 解压到一个固定目录。
@@ -45,7 +48,27 @@ API key、Bedrock、Vertex 等按量计费账号通常没有相同的订阅额�
 
 当前版本未进行商业代码签名，Windows SmartScreen 可能首次显示提示。请只从本仓库的 Releases 下载，或自行从源码构建。
 
+### macOS
+
+1. 从 Releases 下载 `QuotaLens-*-macos-arm64.zip`（Apple Silicon）或 `QuotaLens-*-macos-x64.zip`（Intel），解压后把 `QuotaLens.app` 拖进“应用程序”。
+2. 应用只做了临时签名、没有经过 Apple 公证，首次打开会被拦截。可在“系统设置 → 隐私与安全性”中点“仍要打开”，或在终端执行：
+
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/QuotaLens.app
+   ```
+
+3. 打开后菜单栏出现 `C◎ A◎` 图标，没有程序坞图标。首次读取 Claude 桌面版登录态时，macOS 会询问是否允许 Quota Lens 使用钥匙串中的“Claude Safe Storage”，输入登录密码并选“始终允许”即可。
+4. 首次运行默认开启“登录时启动”，可在菜单中关闭。
+
 ## 使用
+
+### macOS
+
+- 菜单栏图标左边 `C` 是 Codex、右边 `A` 是 Claude，每组同心圆外圈 5 小时、中圈 7 天、内圈模型专项额度，颜色与 Windows 版一致。
+- 点击图标打开菜单：每个额度窗口一行，显示剩余百分比和重置时间；下方有“打开面板”“立即刷新”“息屏并保持运行”“登录时启动”“低额度提醒”和“退出”。
+- “打开面板”在菜单栏右侧下方弹出同心圆详情面板，带实时重置倒计时；点击别处自动收起。
+
+### Windows
 
 - 拖动顶部标题区域移动小组件。
 - 拖到屏幕左或右边缘会贴边成侧栏：平时只露一条竖条。Codex 与 Claude 各有一组同心圆：外圈 5 小时、中圈 7 天、内圈模型专项额度，弧长表示剩余比例；圆下方按同样顺序和颜色逐行列出剩余百分比与重置时间（24 小时内显示时刻如 `14:30`，更远显示日期如 `10/3`）。鼠标停在竖条上会滑出完整面板，移开后自动收回。拖离边缘即恢复悬浮窗，也可在托盘菜单中切换“贴边侧栏”。贴边时竖条始终置顶。
@@ -57,11 +80,11 @@ API key、Bedrock、Vertex 等按量计费账号通常没有相同的订阅额�
 
 ## 隐私与安全
 
-Quota Lens 只读取当前 Windows 用户已有的登录状态，并把凭据直接发送给对应官方服务：
+Quota Lens 只读取当前用户已有的登录状态，并把凭据直接发送给对应官方服务：
 
-- Codex：读取 `%USERPROFILE%\.codex\auth.json` 或 `CODEX_HOME`
-- Claude Code：读取 `%USERPROFILE%\.claude\.credentials.json` 或 `CLAUDE_CONFIG_DIR`
-- Claude Desktop：读取由 Windows DPAPI 保护的 Electron 安全存储，仅在内存中解密
+- Codex：读取 `~/.codex/auth.json`（Windows 为 `%USERPROFILE%\.codex\auth.json`）或 `CODEX_HOME`
+- Claude Code：读取 `~/.claude/.credentials.json` 或 `CLAUDE_CONFIG_DIR`；macOS 上还会读取钥匙串项“Claude Code-credentials”
+- Claude Desktop：Windows 上读取由 DPAPI 保护的 Electron 安全存储；macOS 上经你授权后从钥匙串取“Claude Safe Storage”密码解密。两者都只在内存中解密
 
 token 不会写入 Quota Lens 设置，也不会发送给第三方。详细信息见[隐私说明](docs/PRIVACY.md)和[安全策略](SECURITY.md)。
 
@@ -88,6 +111,14 @@ powershell -ExecutionPolicy Bypass -File .\publish.ps1
 ```
 
 默认生成包含 .NET 运行时的 `artifacts\win-x64-v<版本>\QuotaLens.exe`。使用 `-FrameworkDependent` 可生成较小的框架依赖版本。
+
+macOS 版在 macOS 上构建（需要 .NET 6 SDK 与 Xcode 命令行工具）：
+
+```bash
+./publish-mac.sh osx-arm64
+```
+
+生成 `artifacts/mac/osx-arm64/QuotaLens.app` 和 `artifacts/QuotaLens-v<版本>-macos-arm64.zip`。共享逻辑在 `src/QuotaLens.Core`，Windows 界面在仓库根目录（WPF），macOS 界面在 `src/QuotaLens.Mac`（Avalonia）。
 
 ## 项目文档
 

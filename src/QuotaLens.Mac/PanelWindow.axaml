@@ -1,0 +1,10 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:QuotaLens.Mac"
+        x:Class="QuotaLens.Mac.PanelWindow"
+        Title="Quota Lens"
+        SizeToContent="WidthAndHeight" CanResize="False"
+        SystemDecorations="None" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ShowActivated="True">
+    <local:PanelView x:Name="View" />
+</Window>
