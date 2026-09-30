@@ -1,4 +1,14 @@
+using System.Text.Json.Serialization;
+
 namespace QuotaLens;
+
+/// <summary>Screen edge the widget is docked to as a sidebar; <see cref="None"/> means floating.</summary>
+public enum DockEdge
+{
+    None,
+    Left,
+    Right
+}
 
 public sealed record QuotaWindow(
     string Name,
@@ -44,5 +54,10 @@ public sealed class AppSettings
     public double WidgetOpacity { get; set; } = 0.74;
     public double? WindowLeft { get; set; }
     public double? WindowTop { get; set; }
+
+    /// <summary>Settings files written before 0.5.0 lack this key and therefore start docked right.</summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public DockEdge DockEdge { get; set; } = DockEdge.Right;
+
     public List<string> NotifiedLowQuotaKeys { get; set; } = new();
 }
