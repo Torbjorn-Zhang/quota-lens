@@ -32,7 +32,7 @@ flowchart LR
 - `StartupLog.cs`：追加式本地诊断日志 `startup.log`，记录启动、退出、自启注册与未处理错误，只含时间、版本、参数和简短信息，保留最近 200 行。
 - `CredentialReader.cs`（macOS 部分）与 `MacKeychain.cs`：通过 Security.framework 读取钥匙串项。Claude 桌面版缓存按 Chromium 的 macOS 方案解密：钥匙串“Claude Safe Storage”密码经 PBKDF2-SHA1（`saltysalt`，1003 轮）派生 16 字节密钥，再用 AES-128-CBC（IV 为 16 个空格）解开 `v10` 数据。钥匙串授权对话框会阻塞读取，因此读取在后台进行，调用方最多等 20 秒后提示“正在等待授权”，Codex 照常刷新；拒绝授权后 30 分钟内不再自动弹窗，手动刷新可立即重试。派生出的密钥只在进程内存中缓存，避免“仅允许一次”时反复弹窗。
 - `QuotaWindowLegend.cs`：额度类型分类、两端共用的配色（蓝 5 小时、紫 7 天、绿模型专项，≤20% 红）与重置时间格式。
-- `src/QuotaLens.Mac`：`QuotaController` 管理菜单栏图标与菜单（macOS 上点击状态栏图标只会弹出菜单，因此菜单本身逐行列出额度与重置时间），`TrayIconRenderer` 绘制 `C◎ A◎` 同心圆图标，`PanelView`/`PanelWindow` 是菜单栏下方的详情面板，`MacPlatform` 负责登录启动（`~/Library/LaunchAgents` 中的 LaunchAgent）、通知（`osascript`）与息屏保持唤醒（`caffeinate` + `pmset displaysleepnow`）。`--render-preview <目录>` 用示例数据渲染图标、面板与应用图标 PNG，CI 会在 macOS 上运行它。
+- `src/QuotaLens.Mac`：`MacStatusItem` 通过 Objective-C 运行时直接创建菜单栏项。Avalonia 的 TrayIcon 在 macOS 上固定申请正方形状态栏项（`NSSquareStatusItemLength`），会把宽图标从中间裁掉，而且没有点击事件；这里改用 `NSVariableStatusItemLength`，并把点击回调到 .NET。`QuotaController` 在点击时切换详情面板（放在图标正下方），面板打开期间轮询 `NSEvent` 的按键状态和光标位置，在面板和图标以外按下鼠标即收起（无边框的辅助应用窗口不一定能成为 key window，不能只靠 Deactivated）。`TrayIconRenderer` 绘制 `C◎ A◎` 同心圆图标，`PanelView`/`PanelWindow` 是带实时倒计时的详情面板，底部是设置与操作按钮，`--self-test` 会记录状态栏项实际尺寸、模拟点击并把面板渲染成 PNG 以便远程核对，`MacPlatform` 负责登录启动（`~/Library/LaunchAgents` 中的 LaunchAgent）、通知（`osascript`）与息屏保持唤醒（`caffeinate` + `pmset displaysleepnow`）。`--render-preview <目录>` 用示例数据渲染图标、面板与应用图标 PNG，CI 会在 macOS 上运行它。
 - `tests/QuotaLens.Tests`：使用合成 JSON 和临时加密样本验证解析与凭据选择，不需要真实账号；macOS 解密用 Python `hashlib` 与 LibreSSL 独立生成的已知答案校验。
 
 ## 数据流原则

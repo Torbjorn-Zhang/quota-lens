@@ -8,9 +8,13 @@ internal static class Program
     /// <summary>Set by <c>--render-preview &lt;dir&gt;</c>: render the icon and panel with sample data, then exit.</summary>
     internal static string? PreviewDirectory { get; private set; }
 
+    /// <summary>Set by <c>--self-test</c>: log the menu bar item size and exercise the click path.</summary>
+    internal static bool SelfTest { get; private set; }
+
     [STAThread]
     public static int Main(string[] args)
     {
+        SelfTest = args.Contains("--self-test", StringComparer.Ordinal);
         var previewIndex = Array.IndexOf(args, "--render-preview");
         if (previewIndex >= 0 && previewIndex + 1 < args.Length)
         {

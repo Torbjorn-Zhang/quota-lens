@@ -26,7 +26,7 @@ Quota Lens is a lightweight quota monitor that shows subscription usage, reset t
 - Edge sidebar: dragged to the left or right screen edge, it collapses into a slim strip of concentric ring gauges with reset times, slides the full panel out on hover, and tucks it back when the cursor leaves
 - Turns off all displays with one click while preventing automatic system sleep; mouse or keyboard input wakes the displays
 - Optional launch at Windows sign-in
-- macOS menu bar app: the menu bar icon shows Codex and Claude as two sets of mini concentric rings; the menu lists every quota window with its remaining percentage and reset time, and opens the same dark panel
+- macOS menu bar app: the menu bar icon shows Codex and Claude as two sets of mini concentric rings; one click drops the same dark panel with every quota window's remaining percentage and a live reset countdown
 - Never persists OAuth tokens or writes credential/request logs
 
 ## Requirements
@@ -56,7 +56,7 @@ API-key, Bedrock, Vertex, and other metered accounts generally do not expose the
    ```
 
 3. A `C◎ A◎` icon appears in the menu bar; there is no Dock icon. The first time it reads Claude Desktop's sign-in, macOS asks whether Quota Lens may use “Claude Safe Storage” from the keychain; enter your login password and choose “Always Allow”.
-4. Launch at login is on after the first run and can be turned off from the menu.
+4. Launch at login is on after the first run and can be turned off at the bottom of the panel.
 
 The current release is not commercially code-signed, so Windows SmartScreen may show a warning on first launch. Download only from this repository's Releases page, or build from source.
 
@@ -65,8 +65,8 @@ The current release is not commercially code-signed, so Windows SmartScreen may 
 ### macOS
 
 - In the menu bar icon, `C` is Codex and `A` is Claude; each ring set shows the 5-hour window outside, 7 days in the middle, and the model allowance inside, in the same colours as on Windows.
-- Click the icon for the menu: one line per quota window with its remaining percentage and reset time, then “Open panel”, “Refresh now”, “Turn off displays and stay awake”, “Launch at login”, “Low-quota alerts”, and “Quit” (labels are in Chinese).
-- “Open panel” (打开面板) drops the ring panel with live reset countdowns below the right end of the menu bar; clicking elsewhere hides it.
+- Click the icon to drop the ring panel below it: one row per quota window with its remaining percentage and a reset countdown that ticks every second (for example “2时1分后 · 10/1 03:40”), matching the Windows panel. Click elsewhere or the icon again to hide it.
+- `↻` in the panel refreshes now; the bottom row toggles launch at login and low-quota alerts, and offers display-off-while-awake and quit (labels are in Chinese).
 
 ### Windows
 

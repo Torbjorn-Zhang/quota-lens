@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Avalonia;
-using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
 using Avalonia.Threading;
@@ -10,13 +9,12 @@ using QuotaLens.Services;
 namespace QuotaLens.Mac;
 
 /// <summary>
-/// Owns the menu bar item. On macOS a click on a status item always opens its menu (Avalonia
-/// raises no click event there), so the menu itself carries the numbers: one line per quota window
-/// with the remaining percentage and reset time, followed by the actions. The icon shows the rings.
+/// Owns the menu bar item and the panel. The item shows the ring icon; a click toggles the panel,
+/// which also carries the settings and actions (launch at login, alerts, display off, quit).
 /// </summary>
 internal sealed class QuotaController : IDisposable
 {
-    private const int MenuTextLimit = 46;
+    private static readonly TimeSpan ReopenGuard = TimeSpan.FromMilliseconds(350);
 
     private readonly Application _app;
     private readonly IClassicDesktopStyleApplicationLifetime _desktop;
@@ -26,12 +24,14 @@ internal sealed class QuotaController : IDisposable
     private readonly string _settingsPath = Path.Combine(AppPaths.DataDirectory, "settings.json");
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
     private readonly AppSettings _settings;
-    private readonly TrayIcon _trayIcon = new() { ToolTipText = "Quota Lens" };
-    private readonly NativeMenu _menu = new();
-    private PanelWindow? _panel;
+    private readonly PanelWindow _panel = new();
+    private readonly DispatcherTimer _outsideClickTimer = new() { Interval = TimeSpan.FromMilliseconds(60) };
+    private MacStatusItem? _statusItem;
     private QuotaSnapshot? _snapshot;
     private CancellationTokenSource? _refreshCancellation;
     private string? _lastStateSummary;
+    private double _unitsPerPoint = 1;
+    private bool _mouseWasDown;
 
     public QuotaController(Application app, IClassicDesktopStyleApplicationLifetime desktop)
     {
@@ -40,41 +40,67 @@ internal sealed class QuotaController : IDisposable
         _settings = LoadSettings();
         _settings.PollSeconds = Math.Clamp(_settings.PollSeconds, 30, 900);
         foreach (var key in _settings.NotifiedLowQuotaKeys ?? new List<string>()) _warningKeys.Add(key);
+
+        var view = _panel.Panel;
+        view.RefreshRequested += (_, _) => _ = RefreshAsync(forceClaudeRefresh: true);
+        view.ScreenOffRequested += (_, _) =>
+        {
+            _panel.Hide();
+            MacPlatform.TurnOffDisplaysKeepingAwake();
+        };
+        view.QuitRequested += (_, _) => _desktop.Shutdown();
+        view.LaunchAtLoginToggled += (_, _) =>
+        {
+            if (TrySetLaunchAtLogin(!_settings.StartWithWindows))
+            {
+                _settings.StartWithWindows = !_settings.StartWithWindows;
+                SaveSettings();
+            }
+            SyncPanelOptions();
+        };
+        view.AlertsToggled += (_, _) =>
+        {
+            _settings.LowQuotaNotificationsEnabled = !_settings.LowQuotaNotificationsEnabled;
+            SaveSettings();
+            SyncPanelOptions();
+        };
+        SyncPanelOptions();
+        _outsideClickTimer.Tick += (_, _) => HidePanelOnOutsideClick();
     }
 
     public void Start()
     {
         if (_settings.StartWithWindows) TrySetLaunchAtLogin(true);
 
-        _trayIcon.Menu = _menu;
-        _trayIcon.Icon = TrayIconRenderer.Render(null, IsDarkMenuBar());
-        TrayIcon.SetIcons(_app, new TrayIcons { _trayIcon });
-        if (_app.PlatformSettings is { } platformSettings)
+        if (OperatingSystem.IsMacOS())
         {
-            platformSettings.ColorValuesChanged += (_, _) =>
-                Dispatcher.UIThread.Post(() => _trayIcon.Icon = TrayIconRenderer.Render(_snapshot, IsDarkMenuBar()));
+            _statusItem = new MacStatusItem(() => Dispatcher.UIThread.Post(TogglePanel));
+            UpdateStatusItem();
         }
 
-        BuildMenu();
+        if (_app.PlatformSettings is { } platformSettings)
+        {
+            platformSettings.ColorValuesChanged += (_, _) => Dispatcher.UIThread.Post(UpdateStatusItem);
+        }
+
         _refreshTimer.Interval = TimeSpan.FromSeconds(_settings.PollSeconds);
         _refreshTimer.Tick += async (_, _) => await RefreshAsync(forceClaudeRefresh: false);
         _refreshTimer.Start();
         _ = RefreshAsync(forceClaudeRefresh: false);
+
+        if (Program.SelfTest) _ = RunSelfTestAsync();
     }
 
     private async Task RefreshAsync(bool forceClaudeRefresh)
     {
         if (_refreshCancellation is not null) return;
         _refreshCancellation = new CancellationTokenSource();
-        _panel?.SetRefreshing(true);
+        _panel.Panel.SetRefreshing(true);
         try
         {
             _snapshot = await _quotaService.FetchAsync(_refreshCancellation.Token, forceClaudeRefresh);
-            _trayIcon.Icon = TrayIconRenderer.Render(_snapshot, IsDarkMenuBar());
-            _trayIcon.ToolTipText =
-                $"Quota Lens · Codex {PrimaryRemaining(_snapshot.Codex)} · Claude {PrimaryRemaining(_snapshot.Claude)}";
-            BuildMenu();
-            if (_panel?.IsVisible == true) _panel.Render(_snapshot);
+            UpdateStatusItem();
+            _panel.Panel.Render(_snapshot);
             NotifyLowQuota(_snapshot);
             LogStateChange(_snapshot);
         }
@@ -90,83 +116,172 @@ internal sealed class QuotaController : IDisposable
         {
             _refreshCancellation.Dispose();
             _refreshCancellation = null;
-            _panel?.SetRefreshing(false);
+            _panel.Panel.SetRefreshing(false);
         }
     }
 
-    private void BuildMenu()
+    private void UpdateStatusItem()
     {
-        _menu.Items.Clear();
-        if (_snapshot is null)
-        {
-            _menu.Items.Add(new NativeMenuItem("正在获取额度…") { IsEnabled = false });
-        }
-        else
-        {
-            var now = DateTimeOffset.Now;
-            AddProviderLines(_snapshot.Codex, now);
-            AddProviderLines(_snapshot.Claude, now);
-            _menu.Items.Add(new NativeMenuItemSeparator());
-            _menu.Items.Add(new NativeMenuItem($"更新于 {_snapshot.FetchedAt:HH:mm:ss}") { IsEnabled = false });
-        }
-
-        _menu.Items.Add(Action("打开面板", ShowPanel));
-        _menu.Items.Add(Action("立即刷新", () => _ = RefreshAsync(forceClaudeRefresh: true)));
-        _menu.Items.Add(Action("息屏并保持运行", MacPlatform.TurnOffDisplaysKeepingAwake));
-        _menu.Items.Add(new NativeMenuItemSeparator());
-        _menu.Items.Add(Toggle("登录时启动", _settings.StartWithWindows, () =>
-        {
-            if (TrySetLaunchAtLogin(!_settings.StartWithWindows))
-            {
-                _settings.StartWithWindows = !_settings.StartWithWindows;
-                SaveSettings();
-            }
-            BuildMenu();
-        }));
-        _menu.Items.Add(Toggle("低额度提醒", _settings.LowQuotaNotificationsEnabled, () =>
-        {
-            _settings.LowQuotaNotificationsEnabled = !_settings.LowQuotaNotificationsEnabled;
-            SaveSettings();
-            BuildMenu();
-        }));
-        _menu.Items.Add(new NativeMenuItemSeparator());
-        _menu.Items.Add(new NativeMenuItem($"Quota Lens {AppPaths.Version}") { IsEnabled = false });
-        _menu.Items.Add(Action("退出 Quota Lens", () => _desktop.Shutdown()));
+        if (_statusItem is null || !OperatingSystem.IsMacOS()) return;
+        _statusItem.SetImage(
+            TrayIconRenderer.RenderPng(_snapshot, IsDarkMenuBar()),
+            TrayIconRenderer.PointWidth,
+            TrayIconRenderer.PointHeight);
+        _statusItem.SetToolTip(_snapshot is null
+            ? "Quota Lens · 正在获取额度"
+            : $"Quota Lens · Codex {PrimaryRemaining(_snapshot.Codex)} · Claude {PrimaryRemaining(_snapshot.Claude)}");
     }
 
-    /// <summary>
-    /// "Claude Code · Max 20×" followed by "5 小时  85% · 03:40 重置" lines. The lines stay enabled
-    /// (grey disabled items are hard to read) and open the panel when chosen.
-    /// </summary>
-    private void AddProviderLines(ProviderQuota quota, DateTimeOffset now)
+    private void TogglePanel()
     {
-        var title = quota.IsAvailable ? $"{quota.Provider} · {quota.Plan}" : quota.Provider;
-        _menu.Items.Add(Action(title, ShowPanel));
-        if (!quota.IsAvailable)
+        if (_panel.IsVisible)
         {
-            _menu.Items.Add(Action("    " + Truncate(quota.Error ?? "未连接"), ShowPanel));
+            _panel.Hide();
             return;
         }
 
-        foreach (var window in quota.Windows)
-        {
-            var reset = QuotaWindowLegend.CompactReset(window.ResetsAt, now);
-            var suffix = window.ResetsAt is null ? string.Empty : $" · {reset} 重置";
-            _menu.Items.Add(Action($"    {window.Name}  {window.RemainingPercent:0}%{suffix}", ShowPanel));
-        }
+        // Clicking the icon while the panel is open first deactivates (and hides) the panel;
+        // that same click must not immediately reopen it.
+        if (DateTime.UtcNow - _panel.HiddenAtUtc < ReopenGuard) return;
+        ShowPanel();
     }
 
     private void ShowPanel()
     {
-        if (_panel is null)
+        if (_snapshot is not null) _panel.Panel.Render(_snapshot);
+        SyncPanelOptions();
+
+        double? anchorCenterX = null;
+        var unitsPerDip = 1.0;
+        if (OperatingSystem.IsMacOS() && _statusItem is not null)
         {
-            _panel = new PanelWindow();
-            _panel.RefreshRequested += (_, _) => _ = RefreshAsync(forceClaudeRefresh: true);
+            // Avalonia's position units on macOS relate to points by the ratio of its primary
+            // screen width to AppKit's; measuring it avoids assuming points or pixels.
+            var cocoaScreen = MacStatusItem.PrimaryScreenFrame();
+            var avaloniaScreen = _panel.Screens.Primary;
+            if (avaloniaScreen is not null && cocoaScreen.Size.Width > 0)
+            {
+                unitsPerDip = avaloniaScreen.Bounds.Width / cocoaScreen.Size.Width;
+                var item = _statusItem.ScreenFrame;
+                if (item.Size.Width > 0)
+                {
+                    anchorCenterX = avaloniaScreen.Bounds.X
+                                    + (item.Origin.X - cocoaScreen.Origin.X + item.Size.Width / 2) * unitsPerDip;
+                }
+            }
+
+            _unitsPerPoint = unitsPerDip;
+            MacStatusItem.ActivateApp();
         }
 
-        if (_snapshot is not null) _panel.Render(_snapshot);
-        _panel.ShowUnderMenuBar();
+        _panel.ShowBelowMenuBar(anchorCenterX, unitsPerDip);
+        _mouseWasDown = true; // ignore the press that opened the panel
+        _outsideClickTimer.Start();
     }
+
+    /// <summary>
+    /// A borderless panel of an accessory app does not reliably become the key window, so its
+    /// Deactivated event cannot be trusted to close it. Instead, while the panel is open, a new mouse
+    /// press anywhere outside the panel and the menu bar icon closes it. Reading the pressed buttons
+    /// and cursor position needs no extra permission.
+    /// </summary>
+    private void HidePanelOnOutsideClick()
+    {
+        if (!_panel.IsVisible || _statusItem is null || !OperatingSystem.IsMacOS())
+        {
+            _outsideClickTimer.Stop();
+            return;
+        }
+
+        var down = MacStatusItem.PressedMouseButtons() != 0;
+        var pressed = down && !_mouseWasDown;
+        _mouseWasDown = down;
+        if (!pressed) return;
+
+        var screen = MacStatusItem.PrimaryScreenFrame();
+        var cursor = MacStatusItem.MouseLocation();
+        var item = _statusItem.ScreenFrame;
+        var insideItem = cursor.X >= item.Origin.X && cursor.X <= item.Origin.X + item.Size.Width
+                         && cursor.Y >= item.Origin.Y && cursor.Y <= item.Origin.Y + item.Size.Height;
+        if (insideItem) return; // the icon's own click toggles the panel
+
+        // Cocoa points (origin bottom left) to Avalonia position units (origin top left).
+        var origin = _panel.Screens.Primary?.Bounds.Position ?? default;
+        var x = origin.X + (cursor.X - screen.Origin.X) * _unitsPerPoint;
+        var y = origin.Y + (screen.Origin.Y + screen.Size.Height - cursor.Y) * _unitsPerPoint;
+        var panel = new Rect(
+            _panel.Position.X,
+            _panel.Position.Y,
+            _panel.Bounds.Width * _unitsPerPoint,
+            _panel.Bounds.Height * _unitsPerPoint);
+        if (!panel.Contains(new Point(x, y))) _panel.Hide();
+    }
+
+    /// <summary>
+    /// <c>--self-test</c>: logs the menu bar item's real size and exercises the click path twice
+    /// (open, then close), so the behaviour can be checked from the log without a screen.
+    /// </summary>
+    private async Task RunSelfTestAsync()
+    {
+        await Task.Delay(TimeSpan.FromSeconds(3));
+        if (_statusItem is null || !OperatingSystem.IsMacOS())
+        {
+            StartupLog.Write("self-test: no status item on this platform");
+            return;
+        }
+
+        var frame = _statusItem.ScreenFrame;
+        StartupLog.Write(
+            $"self-test: status item {frame.Size.Width:0.#}x{frame.Size.Height:0.#} pt at x={frame.Origin.X:0.#}; " +
+            $"icon {TrayIconRenderer.PointWidth:0.#}x{TrayIconRenderer.PointHeight:0.#} pt");
+
+        // Wait for real data so the panel is checked the way the user sees it.
+        for (var waited = 0; _snapshot is null && waited < 90; waited++)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(1));
+        }
+
+        _statusItem.PerformClick();
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        var screen = _panel.Screens.Primary;
+        StartupLog.Write(
+            $"self-test: after click panel visible={_panel.IsVisible} active={_panel.IsActive} " +
+            $"position={_panel.Position} size={_panel.Bounds.Width:0}x{_panel.Bounds.Height:0} " +
+            $"screen bounds={screen?.Bounds} work={screen?.WorkingArea} scaling={screen?.Scaling}");
+        StartupLog.Write($"self-test: countdowns shown: {string.Join(" | ", _panel.Panel.CountdownTexts())}");
+        SaveSelfTestSnapshot();
+
+        await Task.Delay(TimeSpan.FromSeconds(1));
+        _statusItem.PerformClick();
+        await Task.Delay(TimeSpan.FromSeconds(1));
+        StartupLog.Write(
+            $"self-test: after second click panel visible={_panel.IsVisible}, outside-click watcher " +
+            $"{(_outsideClickTimer.IsEnabled ? "running" : "stopped")}");
+    }
+
+    /// <summary>Renders the live panel as displayed (the app drawing its own window needs no screen-recording permission).</summary>
+    private void SaveSelfTestSnapshot()
+    {
+        try
+        {
+            var view = _panel.Panel;
+            var size = view.Bounds.Size;
+            using var bitmap = new Avalonia.Media.Imaging.RenderTargetBitmap(
+                new PixelSize((int)Math.Ceiling(size.Width), (int)Math.Ceiling(size.Height)),
+                new Vector(96, 96));
+            bitmap.Render(view);
+            var path = Path.Combine(AppPaths.DataDirectory, "self-test-panel.png");
+            bitmap.Save(path);
+            StartupLog.Write($"self-test: panel rendered to {path}");
+        }
+        catch (Exception ex)
+        {
+            StartupLog.Write($"self-test: panel render failed: {ex.GetType().Name}: {ex.Message}");
+        }
+    }
+
+    private void SyncPanelOptions() =>
+        _panel.Panel.SetOptions(_settings.StartWithWindows, _settings.LowQuotaNotificationsEnabled);
 
     private void NotifyLowQuota(QuotaSnapshot snapshot)
     {
@@ -251,34 +366,13 @@ internal sealed class QuotaController : IDisposable
     private static string PrimaryRemaining(ProviderQuota quota) =>
         quota.IsAvailable ? $"{quota.Windows[0].RemainingPercent:0}%" : "未连接";
 
-    private static string Truncate(string text) =>
-        text.Length <= MenuTextLimit ? text : text[..(MenuTextLimit - 1)] + "…";
-
-    private static NativeMenuItem Action(string header, Action onClick)
-    {
-        var item = new NativeMenuItem(header);
-        item.Click += (_, _) => onClick();
-        return item;
-    }
-
-    private static NativeMenuItem Toggle(string header, bool isChecked, Action onClick)
-    {
-        var item = new NativeMenuItem(header)
-        {
-            ToggleType = NativeMenuItemToggleType.CheckBox,
-            IsChecked = isChecked
-        };
-        item.Click += (_, _) => onClick();
-        return item;
-    }
-
     public void Dispose()
     {
+        _outsideClickTimer.Stop();
         _refreshTimer.Stop();
         _refreshCancellation?.Cancel();
         MacPlatform.StopKeepingAwake();
-        _trayIcon.IsVisible = false;
-        _trayIcon.Dispose();
+        if (OperatingSystem.IsMacOS()) _statusItem?.Dispose();
         _quotaService.Dispose();
     }
 }

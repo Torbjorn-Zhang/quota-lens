@@ -1,6 +1,5 @@
 using System.Globalization;
 using Avalonia;
-using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 
@@ -23,14 +22,14 @@ internal static class TrayIconRenderer
     private const double GroupGap = 5;
     private const double Scale = 2;
 
-    internal static WindowIcon Render(QuotaSnapshot? snapshot, bool darkMenuBar) =>
-        new(new MemoryStream(RenderPng(snapshot, darkMenuBar)));
+    /// <summary>Display size of the icon in points; the PNG is rendered at twice this.</summary>
+    internal static double PointWidth => Math.Ceiling(2 * (LetterWidth + LetterToRing + RingDiameter) + GroupGap);
+    internal static double PointHeight => Height;
 
     internal static byte[] RenderPng(QuotaSnapshot? snapshot, bool darkMenuBar)
     {
-        var width = 2 * (LetterWidth + LetterToRing + RingDiameter) + GroupGap;
         using var bitmap = new RenderTargetBitmap(
-            new PixelSize((int)Math.Ceiling(width * Scale), (int)(Height * Scale)),
+            new PixelSize((int)(PointWidth * Scale), (int)(PointHeight * Scale)),
             new Vector(96 * Scale, 96 * Scale));
 
         var letterBrush = QuotaPalette.Hex(darkMenuBar ? "#EAF0FF" : "#1C2230");

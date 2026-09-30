@@ -16,14 +16,53 @@ public partial class PanelView : UserControl
 {
     private readonly List<(TextBlock Text, QuotaWindow Window)> _resetTexts = new();
 
+    private bool _launchAtLogin;
+    private bool _alerts;
+
     public event EventHandler? RefreshRequested;
     public event EventHandler? CloseRequested;
+    public event EventHandler? LaunchAtLoginToggled;
+    public event EventHandler? AlertsToggled;
+    public event EventHandler? ScreenOffRequested;
+    public event EventHandler? QuitRequested;
 
     public PanelView()
     {
         InitializeComponent();
         WireGadget(RefreshButton, () => RefreshRequested?.Invoke(this, EventArgs.Empty));
         WireGadget(CloseButton, () => CloseRequested?.Invoke(this, EventArgs.Empty));
+        WireGadget(ScreenOffButton, () => ScreenOffRequested?.Invoke(this, EventArgs.Empty));
+        WireGadget(QuitButton, () => QuitRequested?.Invoke(this, EventArgs.Empty));
+        WireToggle(LaunchAtLoginToggle, () => _launchAtLogin, () => LaunchAtLoginToggled?.Invoke(this, EventArgs.Empty));
+        WireToggle(AlertsToggle, () => _alerts, () => AlertsToggled?.Invoke(this, EventArgs.Empty));
+        SetOptions(launchAtLogin: false, alerts: false);
+    }
+
+    /// <summary>Shows the current settings on the two toggle pills.</summary>
+    public void SetOptions(bool launchAtLogin, bool alerts)
+    {
+        _launchAtLogin = launchAtLogin;
+        _alerts = alerts;
+        StyleToggle(LaunchAtLoginToggle, LaunchAtLoginText, "登录时启动", launchAtLogin);
+        StyleToggle(AlertsToggle, AlertsText, "低额度提醒", alerts);
+    }
+
+    private static void StyleToggle(Border pill, TextBlock text, string label, bool on)
+    {
+        pill.Background = QuotaPalette.Hex(on ? "#2638D6A3" : "#14FFFFFF");
+        pill.BorderBrush = QuotaPalette.Hex(on ? "#5538D6A3" : "#20FFFFFF");
+        text.Text = on ? "✓ " + label : label;
+        text.Foreground = QuotaPalette.Hex(on ? "#9FF0D2" : "#CDE0ED");
+    }
+
+    private static void WireToggle(Border pill, Func<bool> isOn, Action onClick)
+    {
+        pill.PointerEntered += (_, _) => pill.Background = QuotaPalette.Hex(isOn() ? "#3638D6A3" : "#2EFFFFFF");
+        pill.PointerExited += (_, _) => pill.Background = QuotaPalette.Hex(isOn() ? "#2638D6A3" : "#14FFFFFF");
+        pill.PointerReleased += (_, e) =>
+        {
+            if (e.InitialPressMouseButton == MouseButton.Left) onClick();
+        };
     }
 
     public void SetRefreshing(bool refreshing)
@@ -41,6 +80,9 @@ public partial class PanelView : UserControl
         ProvidersHost.Children.Add(CreateProviderCard("A", snapshot.Claude));
         UpdateCountdowns();
     }
+
+    /// <summary>The reset lines currently shown, for the self-test log.</summary>
+    public IEnumerable<string> CountdownTexts() => _resetTexts.Select(entry => entry.Text.Text ?? string.Empty);
 
     public void UpdateCountdowns()
     {

@@ -5,39 +5,42 @@ using Avalonia.Threading;
 namespace QuotaLens.Mac;
 
 /// <summary>
-/// Borderless, transparent window hosting <see cref="PanelView"/>, opened from the menu bar menu and
-/// anchored under the right end of the menu bar. Clicking anywhere else hides it again.
+/// Borderless, transparent window hosting <see cref="PanelView"/>, dropped from the menu bar icon.
+/// Clicking anywhere else hides it again.
 /// </summary>
 public partial class PanelWindow : Window
 {
     private readonly DispatcherTimer _countdownTimer = new() { Interval = TimeSpan.FromSeconds(1) };
 
-    public event EventHandler? RefreshRequested;
-
     public PanelWindow()
     {
         InitializeComponent();
         TransparencyLevelHint = new[] { WindowTransparencyLevel.Transparent };
-        View.RefreshRequested += (_, _) => RefreshRequested?.Invoke(this, EventArgs.Empty);
         View.CloseRequested += (_, _) => Hide();
         Deactivated += (_, _) => Hide();
         _countdownTimer.Tick += (_, _) => View.UpdateCountdowns();
     }
 
-    public void Render(QuotaSnapshot snapshot) => View.Render(snapshot);
+    public PanelView Panel => View;
 
-    public void SetRefreshing(bool refreshing) => View.SetRefreshing(refreshing);
+    /// <summary>When the panel was last hidden; a click on the icon right after it closed the panel must not reopen it.</summary>
+    public DateTime HiddenAtUtc { get; private set; } = DateTime.MinValue;
 
-    /// <summary>Shows the panel under the right end of the menu bar of the primary screen.</summary>
-    public void ShowUnderMenuBar()
+    /// <summary>
+    /// Shows the panel just below the menu bar of the primary screen, horizontally centred on
+    /// <paramref name="anchorCenterX"/> (in Avalonia position units) when given, else at the right
+    /// edge, and always kept inside the work area.
+    /// </summary>
+    public void ShowBelowMenuBar(double? anchorCenterX, double unitsPerDip)
     {
         var screen = Screens.Primary ?? Screens.All.FirstOrDefault();
         if (screen is not null)
         {
             var area = screen.WorkingArea;
-            var scale = screen.Scaling;
-            var width = (int)Math.Ceiling(View.Width * scale);
-            Position = new PixelPoint(area.Right - width, area.Y);
+            var width = (int)Math.Ceiling(View.Width * unitsPerDip);
+            var x = anchorCenterX is double center ? (int)Math.Round(center - width / 2.0) : area.Right - width;
+            x = Math.Clamp(x, area.X, Math.Max(area.X, area.Right - width));
+            Position = new PixelPoint(x, area.Y);
         }
 
         Show();
@@ -54,6 +57,7 @@ public partial class PanelWindow : Window
 
     public override void Hide()
     {
+        if (IsVisible) HiddenAtUtc = DateTime.UtcNow;
         _countdownTimer.Stop();
         base.Hide();
     }

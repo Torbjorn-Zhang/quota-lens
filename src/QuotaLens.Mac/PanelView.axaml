@@ -46,6 +46,26 @@
             <!-- One card per provider, generated in code-behind. -->
             <StackPanel x:Name="ProvidersHost" Spacing="10" />
 
+            <!-- Settings and actions (the menu bar icon opens this panel directly, so there is no menu). -->
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+                <Border x:Name="LaunchAtLoginToggle" CornerRadius="9" Padding="9,4" BorderThickness="1" Cursor="Hand">
+                    <TextBlock x:Name="LaunchAtLoginText" Text="登录时启动" FontSize="11" />
+                </Border>
+                <Border x:Name="AlertsToggle" Grid.Column="1" Margin="6,0,0,0" CornerRadius="9" Padding="9,4"
+                        BorderThickness="1" Cursor="Hand">
+                    <TextBlock x:Name="AlertsText" Text="低额度提醒" FontSize="11" />
+                </Border>
+                <Border x:Name="ScreenOffButton" Grid.Column="3" CornerRadius="9" Padding="9,4"
+                        Background="#14FFFFFF" BorderBrush="#20FFFFFF" BorderThickness="1" Cursor="Hand"
+                        ToolTip.Tip="关闭显示器并保持电脑运行">
+                    <TextBlock Text="息屏" FontSize="11" Foreground="#CDE0ED" />
+                </Border>
+                <Border x:Name="QuitButton" Grid.Column="4" Margin="6,0,0,0" CornerRadius="9" Padding="9,4"
+                        Background="#14FFFFFF" BorderBrush="#20FFFFFF" BorderThickness="1" Cursor="Hand">
+                    <TextBlock Text="退出" FontSize="11" Foreground="#CDE0ED" />
+                </Border>
+            </Grid>
+
             <TextBlock Text="Codex 60 秒 · Claude 3 分钟 · 点击别处收起" FontSize="10.5" Foreground="#7F93AE" />
         </StackPanel>
     </Border>
