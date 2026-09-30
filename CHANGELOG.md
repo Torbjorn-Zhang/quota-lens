@@ -13,6 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Changed / 变更
 
+- Each quota type now has a fixed colour shared by the panel and the sidebar strip (blue 5-hour, violet 7-day, green model allowances such as Fable), with the panel's window names tinted as the legend and short labels under the strip gauges; bars turn red at 20% or less and percentages warn in orange at 40% and red at 20%. Previously every bar was coloured by remaining level only / 每种额度类型使用固定颜色，面板与侧栏一致（蓝色 5 小时、紫色 7 天、绿色模型专项如 Fable），面板中的窗口名称按同色标注作为图例，侧栏小条下方加注简称；余量不超过 20% 时条形变红，百分比在 40% 以下变橙、20% 以下变红。此前所有条形只按余量高低着色
 - "Start with Windows" now registers a per-user Task Scheduler logon task (5-second delay, interactive token, no elevation) instead of a Run registry value, which Windows 11 Explorer was observed to skip silently at sign-in; the Run value is removed on upgrade and only used as a fallback when Task Scheduler is unavailable / “开机启动”改为注册当前用户的 Task Scheduler 登录任务（延迟 5 秒、交互令牌、不提权），不再写 Run 注册表值；实测 Windows 11 的 Explorer 会在登录时静默跳过该值。升级后自动清除旧的 Run 值，仅在 Task Scheduler 不可用时回退
 
 ### Planned / 计划

@@ -333,9 +333,12 @@ public partial class MainWindow : Window
 
         if (container is not null) container.Visibility = Visibility.Visible;
         name.Text = window.Name;
+        // The name doubles as the legend for the sidebar strip, so it carries the identity colour.
+        name.Foreground = IdentityBrush(window);
         value.Text = $"{window.RemainingPercent:0}%";
+        value.Foreground = LevelBrush(window.RemainingPercent, Brush("#F3F7FF"));
         bar.Value = window.RemainingPercent;
-        bar.Foreground = RemainingBrush(window.RemainingPercent);
+        bar.Foreground = BarBrush(window);
         reset.Tag = window;
         reset.Text = FormatReset(window.ResetsAt);
     }
@@ -483,12 +486,30 @@ public partial class MainWindow : Window
         return $"{countdown}后 · {resetAt.Value.LocalDateTime:M/d HH:mm}";
     }
 
-    private static SolidColorBrush RemainingBrush(double remaining) =>
+    /// <summary>
+    /// Fixed colour per window kind, shared by the panel and the sidebar strip: blue for the
+    /// 5-hour session, violet for the 7-day allowance, green for model allowances such as Fable.
+    /// </summary>
+    private static SolidColorBrush IdentityBrush(QuotaWindow window) =>
+        QuotaWindowLegend.Classify(window) switch
+        {
+            QuotaWindowKind.Session => Brush("#4CC9F0"),
+            QuotaWindowKind.Weekly => Brush("#B18CFF"),
+            QuotaWindowKind.Model => Brush("#38D6A3"),
+            _ => Brush("#9DB2C8")
+        };
+
+    /// <summary>Bars keep their identity colour until the window is nearly exhausted.</summary>
+    private static SolidColorBrush BarBrush(QuotaWindow window) =>
+        window.RemainingPercent <= 20 ? Brush("#FF6B7A") : IdentityBrush(window);
+
+    /// <summary>Percentages warn in orange at 40% or less and red at 20% or less.</summary>
+    private static SolidColorBrush LevelBrush(double remaining, SolidColorBrush normal) =>
         remaining switch
         {
             <= 20 => Brush("#FF6B7A"),
             <= 40 => Brush("#FFB454"),
-            _ => Brush("#38D6A3")
+            _ => normal
         };
 
     private static SolidColorBrush Brush(string color) =>

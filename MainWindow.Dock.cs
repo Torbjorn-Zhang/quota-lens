@@ -510,8 +510,9 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// One mini vertical gauge per quota window (5-hour, 7-day, then model-scoped, at most three)
-    /// plus the primary window's remaining percentage, matching the tray tooltip.
+    /// One labelled mini gauge per quota window (5-hour, 7-day, then model-scoped, at most three)
+    /// in the window's identity colour, plus the primary window's remaining percentage, matching
+    /// the tray tooltip.
     /// </summary>
     private static void RenderStripProvider(
         ProviderQuota quota,
@@ -531,31 +532,46 @@ public partial class MainWindow
         badge.Opacity = 1;
         foreach (var window in quota.Windows.Take(3))
         {
-            bars.Children.Add(CreateStripBar(window.RemainingPercent));
+            bars.Children.Add(CreateStripColumn(window));
         }
 
+        // Tinted like its 5h gauge so the number reads as belonging to it, unless it is warning.
         var primary = quota.Windows[0];
         value.Text = $"{primary.RemainingPercent:0}%";
-        value.Foreground = RemainingBrush(primary.RemainingPercent);
+        value.Foreground = LevelBrush(primary.RemainingPercent, IdentityBrush(primary));
     }
 
-    private static FrameworkElement CreateStripBar(double remaining)
+    private static FrameworkElement CreateStripColumn(QuotaWindow window)
     {
         var fill = new Border
         {
-            Height = StripBarHeight * Math.Clamp(remaining, 0, 100) / 100,
+            Height = StripBarHeight * Math.Clamp(window.RemainingPercent, 0, 100) / 100,
             VerticalAlignment = VerticalAlignment.Bottom,
-            CornerRadius = new CornerRadius(3.5),
-            Background = RemainingBrush(remaining)
+            CornerRadius = new CornerRadius(4),
+            Background = BarBrush(window)
         };
-        return new Border
+        var track = new Border
         {
-            Width = 7,
+            Width = 8,
             Height = StripBarHeight,
-            Margin = new Thickness(2, 0, 2, 0),
-            CornerRadius = new CornerRadius(3.5),
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+            CornerRadius = new CornerRadius(4),
             Background = Brush("#1FFFFFFF"),
             Child = fill
         };
+        var label = new TextBlock
+        {
+            Text = QuotaWindowLegend.ShortLabel(window),
+            FontSize = 9,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = IdentityBrush(window),
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+            Margin = new Thickness(0, 3, 0, 0)
+        };
+
+        var column = new StackPanel { MinWidth = 12, Margin = new Thickness(0.5, 0, 0.5, 0) };
+        column.Children.Add(track);
+        column.Children.Add(label);
+        return column;
     }
 }

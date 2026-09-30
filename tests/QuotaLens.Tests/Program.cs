@@ -443,6 +443,40 @@ Run("Docked top stays inside the work area", () =>
     Equal(-16d, DockPlacement.ClampTop(470, 2000, 0, 1040, 16));
 });
 
+Run("Quota windows get a kind and a short sidebar label", () =>
+{
+    var session = new QuotaWindow("5 小时", 10, null);
+    var weekly = new QuotaWindow("7 天", 10, null);
+    var fable = new QuotaWindow("Fable 周额度", 10, null, IsModelScoped: true);
+    var idOnly = new QuotaWindow("claude-fable-5-1 周额度", 10, null, IsModelScoped: true);
+    var day = new QuotaWindow("1 天", 10, null);
+    var hours = new QuotaWindow("12 小时", 10, null);
+
+    Equal(QuotaWindowKind.Session, QuotaWindowLegend.Classify(session));
+    Equal(QuotaWindowKind.Weekly, QuotaWindowLegend.Classify(weekly));
+    Equal(QuotaWindowKind.Model, QuotaWindowLegend.Classify(fable));
+    Equal(QuotaWindowKind.Other, QuotaWindowLegend.Classify(day));
+
+    Equal("5h", QuotaWindowLegend.ShortLabel(session));
+    Equal("7d", QuotaWindowLegend.ShortLabel(weekly));
+    Equal("F", QuotaWindowLegend.ShortLabel(fable));
+    Equal("F", QuotaWindowLegend.ShortLabel(idOnly));
+    Equal("1d", QuotaWindowLegend.ShortLabel(day));
+    Equal("12h", QuotaWindowLegend.ShortLabel(hours));
+
+    // The parser's window names must keep matching the legend's kinds.
+    using var json = JsonDocument.Parse(@"{
+      ""five_hour"": { ""utilization"": 10, ""resets_at"": ""2026-09-02T09:00:00+00:00"" },
+      ""seven_day"": { ""utilization"": 20, ""resets_at"": ""2026-09-05T06:00:00+00:00"" },
+      ""limits"": [
+        { ""kind"": ""weekly_scoped"", ""percent"": 3, ""resets_at"": ""2026-09-05T06:00:00+00:00"",
+          ""scope"": { ""model"": { ""id"": null, ""display_name"": ""Fable"" } }, ""is_active"": false }
+      ]
+    }");
+    var kinds = QuotaService.ParseClaude(json.RootElement).Windows.Select(QuotaWindowLegend.Classify).ToList();
+    Equal("Session,Weekly,Model", string.Join(",", kinds));
+});
+
 Run("Settings default to a right-docked sidebar", () =>
 {
     var legacy = JsonSerializer.Deserialize<AppSettings>("{\"PollSeconds\":60,\"WindowTop\":470}")!;

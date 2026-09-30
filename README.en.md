@@ -48,7 +48,8 @@ The current release is not commercially code-signed, so Windows SmartScreen may 
 ## Use
 
 - Drag the top header to move the widget.
-- Drag it against the left or right screen edge to dock it as a sidebar. It then shows only a slim strip with mini gauges for each Codex and Claude quota window and the 5-hour remaining percentage; rest the cursor on the strip to slide out the full panel, which tucks back once the cursor leaves. Drag it away from the edge to float it again, or toggle “Edge sidebar” (贴边侧栏) from the tray menu. The docked strip always stays on top.
+- Drag it against the left or right screen edge to dock it as a sidebar. It then shows only a slim strip with labelled mini gauges (`5h`, `7d`, `F`, …) for each Codex and Claude quota window and the 5-hour remaining percentage; rest the cursor on the strip to slide out the full panel, which tucks back once the cursor leaves. Drag it away from the edge to float it again, or toggle “Edge sidebar” (贴边侧栏) from the tray menu. The docked strip always stays on top.
+- Colours identify the quota type and match between the panel and the sidebar: blue for the 5-hour window, violet for 7 days, green for model allowances such as Fable. A bar turns red at 20% or less remaining; percentages turn orange at 40% and red at 20%.
 - Select `↻` to refresh and `◇` to toggle always-on-top (floating mode only).
 - Select the moon button to turn off the displays while keeping the computer awake.
 - `×` hides the window to the tray; choose “Exit” from the tray menu to stop the app.
