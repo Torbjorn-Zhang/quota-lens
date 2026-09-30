@@ -479,6 +479,19 @@ Run("Sidebar reset times are compact", () =>
     Equal("13:30", QuotaWindowLegend.CompactReset(now.AddHours(3.5).ToUniversalTime(), now));
 });
 
+Run("Menu bar countdowns are compact", () =>
+{
+    var now = new DateTimeOffset(2026, 10, 1, 1, 40, 0, TimeSpan.Zero);
+    Equal("—", QuotaWindowLegend.CompactCountdown(null, now));
+    Equal("0m", QuotaWindowLegend.CompactCountdown(now.AddSeconds(-5), now));
+    Equal("1m", QuotaWindowLegend.CompactCountdown(now.AddSeconds(20), now));
+    Equal("42m", QuotaWindowLegend.CompactCountdown(now.AddMinutes(42), now));
+    Equal("2h01m", QuotaWindowLegend.CompactCountdown(now.AddHours(2).AddMinutes(1).AddSeconds(30), now));
+    Equal("23h59m", QuotaWindowLegend.CompactCountdown(now.AddHours(23).AddMinutes(59), now));
+    Equal("1d0h", QuotaWindowLegend.CompactCountdown(now.AddDays(1), now));
+    Equal("2d14h", QuotaWindowLegend.CompactCountdown(now.AddDays(2).AddHours(14).AddMinutes(20), now));
+});
+
 Run("macOS Claude Desktop cache decrypts like Chromium", () =>
 {
     // Known-answer vector produced independently on macOS with Python's hashlib.pbkdf2_hmac and

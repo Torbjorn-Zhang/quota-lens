@@ -49,6 +49,20 @@ internal static class QuotaWindowLegend
         _ => null
     };
 
+    /// <summary>
+    /// Countdown short enough for the macOS menu bar: "42m" under an hour, "2h05m" under a day,
+    /// otherwise "2d14h". "0m" once the reset has passed and "—" when none was reported.
+    /// </summary>
+    internal static string CompactCountdown(DateTimeOffset? resetsAt, DateTimeOffset now)
+    {
+        if (resetsAt is not DateTimeOffset reset) return "—";
+        var remaining = reset - now;
+        if (remaining <= TimeSpan.Zero) return "0m";
+        if (remaining < TimeSpan.FromHours(1)) return $"{Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes))}m";
+        if (remaining < TimeSpan.FromDays(1)) return $"{(int)remaining.TotalHours}h{remaining.Minutes:00}m";
+        return $"{(int)remaining.TotalDays}d{remaining.Hours}h";
+    }
+
     /// <summary>Countdown plus local reset time, e.g. "2时19分后 · 10/3 02:49".</summary>
     internal static string FormatResetCountdown(DateTimeOffset? resetAt, DateTimeOffset now)
     {

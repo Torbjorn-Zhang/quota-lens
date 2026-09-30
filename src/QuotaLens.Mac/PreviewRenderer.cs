@@ -17,8 +17,11 @@ internal static class PreviewRenderer
         Directory.CreateDirectory(directory);
         var snapshot = SampleSnapshot();
 
-        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-dark.png"), TrayIconRenderer.RenderPng(snapshot, darkMenuBar: true));
-        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-light.png"), TrayIconRenderer.RenderPng(snapshot, darkMenuBar: false));
+        var now = snapshot.FetchedAt;
+        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-dark.png"), TrayIconRenderer.RenderPng(snapshot, darkMenuBar: true, now));
+        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-light.png"), TrayIconRenderer.RenderPng(snapshot, darkMenuBar: false, now));
+        var codexOffline = snapshot with { Codex = ProviderQuota.Failed("Codex", "Codex 登录已过期，请在客户端中重新登录。") };
+        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-offline.png"), TrayIconRenderer.RenderPng(codexOffline, darkMenuBar: true, now));
 
         File.WriteAllBytes(Path.Combine(directory, "app-icon.png"), AppIconRenderer.RenderPng());
 

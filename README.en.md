@@ -55,7 +55,7 @@ API-key, Bedrock, Vertex, and other metered accounts generally do not expose the
    xattr -dr com.apple.quarantine /Applications/QuotaLens.app
    ```
 
-3. A `C◎ A◎` icon appears in the menu bar; there is no Dock icon. The first time it reads Claude Desktop's sign-in, macOS asks whether Quota Lens may use “Claude Safe Storage” from the keychain; enter your login password and choose “Always Allow”.
+3. A `C◎ A◎` icon appears in the menu bar; there is no Dock icon. The first time it reads Claude Desktop's sign-in, macOS asks whether Quota Lens may use “Claude Safe Storage” from the keychain; enter your login password and choose “Always Allow”. Because the app is not signed by Apple, macOS treats every update as a new program and asks once more.
 4. Launch at login is on after the first run and can be turned off at the bottom of the panel.
 
 The current release is not commercially code-signed, so Windows SmartScreen may show a warning on first launch. Download only from this repository's Releases page, or build from source.
@@ -64,7 +64,7 @@ The current release is not commercially code-signed, so Windows SmartScreen may 
 
 ### macOS
 
-- In the menu bar icon, `C` is Codex and `A` is Claude; each ring set shows the 5-hour window outside, 7 days in the middle, and the model allowance inside, in the same colours as on Windows.
+- The menu bar thumbnail is the counterpart of the Windows sidebar strip: `C` is Codex and `A` is Claude; each ring set shows the 5-hour window outside, 7 days in the middle, and the model allowance inside, in the same colours as on Windows. Beside the rings, two lines give the 5-hour and 7-day remaining percentage and reset countdown (for example `77% 2h01m` and `73% 2d14h`), refreshed every 30 seconds and turning orange or red when low.
 - Click the icon to drop the ring panel below it: one row per quota window with its remaining percentage and a reset countdown that ticks every second (for example “2时1分后 · 10/1 03:40”), matching the Windows panel. Click elsewhere or the icon again to hide it.
 - `↻` in the panel refreshes now; the bottom row toggles launch at login and low-quota alerts, and offers display-off-while-awake and quit (labels are in Chinese).
 

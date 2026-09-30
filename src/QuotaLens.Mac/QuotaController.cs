@@ -26,6 +26,7 @@ internal sealed class QuotaController : IDisposable
     private readonly AppSettings _settings;
     private readonly PanelWindow _panel = new();
     private readonly DispatcherTimer _outsideClickTimer = new() { Interval = TimeSpan.FromMilliseconds(60) };
+    private readonly DispatcherTimer _thumbnailTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     private MacStatusItem? _statusItem;
     private QuotaSnapshot? _snapshot;
     private CancellationTokenSource? _refreshCancellation;
@@ -88,6 +89,10 @@ internal sealed class QuotaController : IDisposable
         _refreshTimer.Start();
         _ = RefreshAsync(forceClaudeRefresh: false);
 
+        // The thumbnail countdown is minute-precise; redraw it between data refreshes.
+        _thumbnailTimer.Tick += (_, _) => UpdateStatusItem();
+        _thumbnailTimer.Start();
+
         if (Program.SelfTest) _ = RunSelfTestAsync();
     }
 
@@ -124,7 +129,7 @@ internal sealed class QuotaController : IDisposable
     {
         if (_statusItem is null || !OperatingSystem.IsMacOS()) return;
         _statusItem.SetImage(
-            TrayIconRenderer.RenderPng(_snapshot, IsDarkMenuBar()),
+            TrayIconRenderer.RenderPng(_snapshot, IsDarkMenuBar(), DateTimeOffset.Now),
             TrayIconRenderer.PointWidth,
             TrayIconRenderer.PointHeight);
         _statusItem.SetToolTip(_snapshot is null
@@ -250,6 +255,9 @@ internal sealed class QuotaController : IDisposable
             $"screen bounds={screen?.Bounds} work={screen?.WorkingArea} scaling={screen?.Scaling}");
         StartupLog.Write($"self-test: countdowns shown: {string.Join(" | ", _panel.Panel.CountdownTexts())}");
         SaveSelfTestSnapshot();
+        var thumbnail = Path.Combine(AppPaths.DataDirectory, "self-test-menubar.png");
+        File.WriteAllBytes(thumbnail, TrayIconRenderer.RenderPng(_snapshot, IsDarkMenuBar(), DateTimeOffset.Now));
+        StartupLog.Write($"self-test: menu bar thumbnail rendered to {thumbnail} (dark={IsDarkMenuBar()})");
 
         await Task.Delay(TimeSpan.FromSeconds(1));
         _statusItem.PerformClick();
@@ -368,6 +376,7 @@ internal sealed class QuotaController : IDisposable
 
     public void Dispose()
     {
+        _thumbnailTimer.Stop();
         _outsideClickTimer.Stop();
         _refreshTimer.Stop();
         _refreshCancellation?.Cancel();
