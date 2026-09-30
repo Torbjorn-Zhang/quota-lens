@@ -13,7 +13,7 @@ namespace QuotaLens;
 
 /// <summary>
 /// QQ-style edge docking. Dragging the widget against the left or right edge of a monitor's work
-/// area docks it there as a sidebar: it collapses into a slim strip of mini gauges, slides the full
+/// area docks it there as a sidebar: it collapses into a slim strip of ring gauges, slides the full
 /// panel out when the cursor rests on the strip, and slides it back once the cursor leaves the
 /// panel. Dragging it away from the edge turns it back into the floating widget.
 /// </summary>
@@ -29,7 +29,6 @@ public partial class MainWindow
     private const double FloatingWindowWidth = 420;
     private const double DockedWindowWidth = 404;
     private const double ShadowMargin = 16;
-    private const double StripBarHeight = 58;
     private const double PanelHoverTolerance = 8;
     private static readonly TimeSpan HoverExpandDelay = TimeSpan.FromMilliseconds(150);
     private static readonly TimeSpan LeaveCollapseDelay = TimeSpan.FromMilliseconds(350);
@@ -505,73 +504,143 @@ public partial class MainWindow
 
     private void RenderStrip(QuotaSnapshot snapshot)
     {
-        RenderStripProvider(snapshot.Codex, StripCodexBadge, StripCodexBars, StripCodexValue);
-        RenderStripProvider(snapshot.Claude, StripClaudeBadge, StripClaudeBars, StripClaudeValue);
+        var now = DateTimeOffset.Now;
+        RenderStripProvider(snapshot.Codex, StripCodexBadge, StripCodexRings, StripCodexRows, now);
+        RenderStripProvider(snapshot.Claude, StripClaudeBadge, StripClaudeRings, StripClaudeRows, now);
     }
 
     /// <summary>
-    /// One labelled mini gauge per quota window (5-hour, 7-day, then model-scoped, at most three)
-    /// in the window's identity colour, plus the primary window's remaining percentage, matching
-    /// the tray tooltip.
+    /// Concentric rings, one per quota window from the outside in (5-hour, 7-day, model allowance,
+    /// at most three), each drawn in its identity colour with the arc showing what remains. Below
+    /// them one row per window, in the same order and colour, gives the remaining percentage and the
+    /// reset time (clock time within 24 hours, otherwise the date).
     /// </summary>
     private static void RenderStripProvider(
         ProviderQuota quota,
         FrameworkElement badge,
-        System.Windows.Controls.Panel bars,
-        TextBlock value)
+        Canvas rings,
+        System.Windows.Controls.Panel rows,
+        DateTimeOffset now)
     {
-        bars.Children.Clear();
+        rings.Children.Clear();
+        rows.Children.Clear();
+        var windows = quota.IsAvailable ? quota.Windows.Take(StripRingCount).ToList() : new List<QuotaWindow>();
+
+        for (var index = 0; index < StripRingCount; index++)
+        {
+            var window = index < windows.Count ? windows[index] : null;
+            if (window is null && index > 0) break;
+            AddRing(rings, index, window);
+        }
+
         if (!quota.IsAvailable)
         {
             badge.Opacity = 0.45;
-            value.Text = "—";
-            value.Foreground = Brush("#FF6B7A");
+            rows.Children.Add(new TextBlock
+            {
+                Text = "未连接",
+                FontSize = 9.5,
+                Foreground = Brush("#FF6B7A"),
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center
+            });
             return;
         }
 
         badge.Opacity = 1;
-        foreach (var window in quota.Windows.Take(3))
+        foreach (var window in windows)
         {
-            bars.Children.Add(CreateStripColumn(window));
+            rows.Children.Add(CreateStripRow(window, now));
         }
-
-        // Tinted like its 5h gauge so the number reads as belonging to it, unless it is warning.
-        var primary = quota.Windows[0];
-        value.Text = $"{primary.RemainingPercent:0}%";
-        value.Foreground = LevelBrush(primary.RemainingPercent, IdentityBrush(primary));
     }
 
-    private static FrameworkElement CreateStripColumn(QuotaWindow window)
-    {
-        var fill = new Border
-        {
-            Height = StripBarHeight * Math.Clamp(window.RemainingPercent, 0, 100) / 100,
-            VerticalAlignment = VerticalAlignment.Bottom,
-            CornerRadius = new CornerRadius(4),
-            Background = BarBrush(window)
-        };
-        var track = new Border
-        {
-            Width = 8,
-            Height = StripBarHeight,
-            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-            CornerRadius = new CornerRadius(4),
-            Background = Brush("#1FFFFFFF"),
-            Child = fill
-        };
-        var label = new TextBlock
-        {
-            Text = QuotaWindowLegend.ShortLabel(window),
-            FontSize = 9,
-            FontWeight = FontWeights.SemiBold,
-            Foreground = IdentityBrush(window),
-            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-            Margin = new Thickness(0, 3, 0, 0)
-        };
+    private const int StripRingCount = 3;
+    private const double StripRingSize = 48;
+    private const double StripRingStroke = 4;
+    private const double StripRingGap = 2;
 
-        var column = new StackPanel { MinWidth = 12, Margin = new Thickness(0.5, 0, 0.5, 0) };
-        column.Children.Add(track);
-        column.Children.Add(label);
-        return column;
+    /// <summary>
+    /// Draws ring <paramref name="index"/> (0 = outermost): a faint full track plus a clockwise arc
+    /// from twelve o'clock covering the remaining share. A null window draws the track only.
+    /// </summary>
+    private static void AddRing(Canvas canvas, int index, QuotaWindow? window)
+    {
+        var center = StripRingSize / 2;
+        var radius = center - StripRingStroke / 2 - index * (StripRingStroke + StripRingGap);
+        if (radius <= StripRingStroke) return;
+
+        var track = new System.Windows.Shapes.Ellipse
+        {
+            Width = radius * 2,
+            Height = radius * 2,
+            Stroke = Brush("#1FFFFFFF"),
+            StrokeThickness = StripRingStroke
+        };
+        Canvas.SetLeft(track, center - radius);
+        Canvas.SetTop(track, center - radius);
+        canvas.Children.Add(track);
+
+        if (window is null) return;
+        var fraction = Math.Clamp(window.RemainingPercent, 0, 100) / 100;
+        if (fraction <= 0.005) return;
+
+        var stroke = BarBrush(window);
+        if (fraction >= 0.999)
+        {
+            var full = new System.Windows.Shapes.Ellipse
+            {
+                Width = radius * 2,
+                Height = radius * 2,
+                Stroke = stroke,
+                StrokeThickness = StripRingStroke
+            };
+            Canvas.SetLeft(full, center - radius);
+            Canvas.SetTop(full, center - radius);
+            canvas.Children.Add(full);
+            return;
+        }
+
+        var angle = fraction * 2 * Math.PI;
+        var start = new System.Windows.Point(center, center - radius);
+        var end = new System.Windows.Point(center + radius * Math.Sin(angle), center - radius * Math.Cos(angle));
+        var figure = new PathFigure { StartPoint = start, IsClosed = false, IsFilled = false };
+        figure.Segments.Add(new ArcSegment(
+            end,
+            new System.Windows.Size(radius, radius),
+            0,
+            isLargeArc: fraction > 0.5,
+            SweepDirection.Clockwise,
+            isStroked: true));
+        var geometry = new PathGeometry();
+        geometry.Figures.Add(figure);
+
+        canvas.Children.Add(new System.Windows.Shapes.Path
+        {
+            Data = geometry,
+            Stroke = stroke,
+            StrokeThickness = StripRingStroke,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round
+        });
+    }
+
+    private static FrameworkElement CreateStripRow(QuotaWindow window, DateTimeOffset now)
+    {
+        var row = new Grid { Width = 52, Margin = new Thickness(0, 1, 0, 0) };
+        row.Children.Add(new TextBlock
+        {
+            Text = $"{window.RemainingPercent:0}%",
+            FontSize = 9.5,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = LevelBrush(window.RemainingPercent, IdentityBrush(window)),
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Left
+        });
+        row.Children.Add(new TextBlock
+        {
+            Text = QuotaWindowLegend.CompactReset(window.ResetsAt, now),
+            FontSize = 9.5,
+            Foreground = Brush("#B8C6DCF0"),
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Right
+        });
+        return row;
     }
 }

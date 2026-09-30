@@ -17,8 +17,8 @@ internal enum QuotaWindowKind
 }
 
 /// <summary>
-/// Classifies quota windows and derives the short labels printed under the sidebar gauges, so the
-/// thumbnail stays readable without relying on colour alone.
+/// Classifies quota windows for their identity colour and formats the compact reset times shown
+/// in the sidebar strip.
 /// </summary>
 internal static class QuotaWindowLegend
 {
@@ -34,32 +34,19 @@ internal static class QuotaWindowLegend
     }
 
     /// <summary>
-    /// Two- or three-character label: "5h", "7d", the family initial for model allowances
-    /// ("Fable 周额度" becomes "F"), or a compacted duration such as "1d" for other windows.
+    /// Reset time in at most five characters of local time: the clock time ("14:30") when the reset
+    /// is less than 24 hours away, otherwise the date ("10/3"). "重置中" once the reset has passed
+    /// and "—" when the provider did not report one.
     /// </summary>
-    internal static string ShortLabel(QuotaWindow window)
+    internal static string CompactReset(DateTimeOffset? resetsAt, DateTimeOffset now)
     {
-        switch (Classify(window))
-        {
-            case QuotaWindowKind.Session:
-                return "5h";
-            case QuotaWindowKind.Weekly:
-                return "7d";
-            case QuotaWindowKind.Model:
-                var family = window.Name.EndsWith(QuotaService.WeeklyScopedSuffix, StringComparison.Ordinal)
-                    ? window.Name[..^QuotaService.WeeklyScopedSuffix.Length]
-                    : window.Name;
-                family = family.Trim();
-                if (family.StartsWith("claude-", StringComparison.OrdinalIgnoreCase))
-                {
-                    family = family["claude-".Length..];
-                }
-                return family.Length == 0 ? "M" : char.ToUpperInvariant(family[0]).ToString();
-            default:
-                return window.Name
-                    .Replace(" 小时", "h", StringComparison.Ordinal)
-                    .Replace(" 天", "d", StringComparison.Ordinal)
-                    .Replace(" ", string.Empty, StringComparison.Ordinal);
-        }
+        if (resetsAt is not DateTimeOffset reset) return "—";
+        var remaining = reset - now;
+        if (remaining <= TimeSpan.Zero) return "重置中";
+
+        var local = reset.ToLocalTime();
+        return remaining < TimeSpan.FromHours(24)
+            ? local.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture)
+            : $"{local.Month}/{local.Day}";
     }
 }

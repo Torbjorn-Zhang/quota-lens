@@ -443,26 +443,12 @@ Run("Docked top stays inside the work area", () =>
     Equal(-16d, DockPlacement.ClampTop(470, 2000, 0, 1040, 16));
 });
 
-Run("Quota windows get a kind and a short sidebar label", () =>
+Run("Quota windows get a kind for their identity colour", () =>
 {
-    var session = new QuotaWindow("5 小时", 10, null);
-    var weekly = new QuotaWindow("7 天", 10, null);
-    var fable = new QuotaWindow("Fable 周额度", 10, null, IsModelScoped: true);
-    var idOnly = new QuotaWindow("claude-fable-5-1 周额度", 10, null, IsModelScoped: true);
-    var day = new QuotaWindow("1 天", 10, null);
-    var hours = new QuotaWindow("12 小时", 10, null);
-
-    Equal(QuotaWindowKind.Session, QuotaWindowLegend.Classify(session));
-    Equal(QuotaWindowKind.Weekly, QuotaWindowLegend.Classify(weekly));
-    Equal(QuotaWindowKind.Model, QuotaWindowLegend.Classify(fable));
-    Equal(QuotaWindowKind.Other, QuotaWindowLegend.Classify(day));
-
-    Equal("5h", QuotaWindowLegend.ShortLabel(session));
-    Equal("7d", QuotaWindowLegend.ShortLabel(weekly));
-    Equal("F", QuotaWindowLegend.ShortLabel(fable));
-    Equal("F", QuotaWindowLegend.ShortLabel(idOnly));
-    Equal("1d", QuotaWindowLegend.ShortLabel(day));
-    Equal("12h", QuotaWindowLegend.ShortLabel(hours));
+    Equal(QuotaWindowKind.Session, QuotaWindowLegend.Classify(new QuotaWindow("5 小时", 10, null)));
+    Equal(QuotaWindowKind.Weekly, QuotaWindowLegend.Classify(new QuotaWindow("7 天", 10, null)));
+    Equal(QuotaWindowKind.Model, QuotaWindowLegend.Classify(new QuotaWindow("Fable 周额度", 10, null, IsModelScoped: true)));
+    Equal(QuotaWindowKind.Other, QuotaWindowLegend.Classify(new QuotaWindow("1 天", 10, null)));
 
     // The parser's window names must keep matching the legend's kinds.
     using var json = JsonDocument.Parse(@"{
@@ -475,6 +461,22 @@ Run("Quota windows get a kind and a short sidebar label", () =>
     }");
     var kinds = QuotaService.ParseClaude(json.RootElement).Windows.Select(QuotaWindowLegend.Classify).ToList();
     Equal("Session,Weekly,Model", string.Join(",", kinds));
+});
+
+Run("Sidebar reset times are compact", () =>
+{
+    // A mid-September local time keeps the checks clear of daylight-saving transitions.
+    var clock = new DateTime(2026, 9, 20, 10, 0, 0);
+    var now = new DateTimeOffset(clock, TimeZoneInfo.Local.GetUtcOffset(clock));
+
+    Equal("13:30", QuotaWindowLegend.CompactReset(now.AddHours(3.5), now));
+    Equal("09:59", QuotaWindowLegend.CompactReset(now.AddHours(23).AddMinutes(59), now));
+    Equal("9/21", QuotaWindowLegend.CompactReset(now.AddHours(24), now));
+    Equal("9/23", QuotaWindowLegend.CompactReset(now.AddDays(3), now));
+    Equal("重置中", QuotaWindowLegend.CompactReset(now.AddMinutes(-1), now));
+    Equal("—", QuotaWindowLegend.CompactReset(null, now));
+    // Reset times arrive in UTC and are shown in local time.
+    Equal("13:30", QuotaWindowLegend.CompactReset(now.AddHours(3.5).ToUniversalTime(), now));
 });
 
 Run("Settings default to a right-docked sidebar", () =>

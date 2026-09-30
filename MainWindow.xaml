@@ -95,31 +95,28 @@
 
     <Grid x:Name="RootGrid" Margin="16">
         <!-- Collapsed sidebar strip shown while docked to a screen edge (see MainWindow.Dock.cs). -->
-        <Border x:Name="StripFrame" Visibility="Collapsed" Width="46" TextOptions.TextFormattingMode="Display"
+        <Border x:Name="StripFrame" Visibility="Collapsed" Width="60" TextOptions.TextFormattingMode="Display"
                 HorizontalAlignment="Right" VerticalAlignment="Top"
                 Background="{StaticResource GlassBrush}" BorderBrush="#38FFFFFF"
-                BorderThickness="1,1,0,1" CornerRadius="14,0,0,14" Padding="0,10,0,12"
+                BorderThickness="1,1,0,1" CornerRadius="14,0,0,14" Padding="0,9,0,10"
                 MouseLeftButtonDown="StripFrame_MouseLeftButtonDown">
             <StackPanel>
-                <Border x:Name="StripCodexBadge" Width="26" Height="26" CornerRadius="9"
-                        Background="#2FE8ECFF" HorizontalAlignment="Center">
+                <!-- Concentric rings: outer 5-hour, middle 7-day, inner model allowance. -->
+                <Grid x:Name="StripCodexBadge" Width="48" Height="48" HorizontalAlignment="Center">
+                    <Canvas x:Name="StripCodexRings" />
                     <TextBlock Text="C" FontSize="12" FontWeight="SemiBold" Foreground="#F0F4FF"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Border>
-                <StackPanel x:Name="StripCodexBars" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,4" />
-                <TextBlock x:Name="StripCodexValue" Text="—" FontSize="11" FontWeight="SemiBold"
-                           HorizontalAlignment="Center" />
+                </Grid>
+                <StackPanel x:Name="StripCodexRows" HorizontalAlignment="Center" Margin="0,5,0,0" />
 
-                <Border Height="1" Background="#24FFFFFF" Margin="8,11,8,11" />
+                <Border Height="1" Background="#24FFFFFF" Margin="8,9,8,9" />
 
-                <Border x:Name="StripClaudeBadge" Width="26" Height="26" CornerRadius="9"
-                        Background="#35E9D8C6" HorizontalAlignment="Center">
+                <Grid x:Name="StripClaudeBadge" Width="48" Height="48" HorizontalAlignment="Center">
+                    <Canvas x:Name="StripClaudeRings" />
                     <TextBlock Text="A" FontSize="12" FontWeight="SemiBold" Foreground="#FFF1E6DA"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Border>
-                <StackPanel x:Name="StripClaudeBars" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,4" />
-                <TextBlock x:Name="StripClaudeValue" Text="—" FontSize="11" FontWeight="SemiBold"
-                           HorizontalAlignment="Center" />
+                </Grid>
+                <StackPanel x:Name="StripClaudeRows" HorizontalAlignment="Center" Margin="0,5,0,0" />
             </StackPanel>
         </Border>
 
