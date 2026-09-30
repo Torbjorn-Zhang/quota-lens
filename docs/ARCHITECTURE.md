@@ -23,6 +23,7 @@ flowchart LR
 ## 组件
 
 - `MainWindow.xaml(.cs)`：窗口、托盘、通知、倒计时、息屏和系统保持唤醒。
+- `MainWindow.Dock.cs`：QQ 式贴边侧栏。拖到显示器工作区左/右边缘时贴边并收成迷你额度竖条，轮询光标位置决定何时滑出完整面板、何时收回；吸附与越界判断在可单测的 `DockPlacement.cs` 中。
 - `QuotaService.cs`：HTTP 请求、响应解析、Claude 限流退避和错误归一化。
 - `CredentialReader.cs`：只读发现 Codex/Claude 登录状态，并在内存中解锁 Claude Desktop 安全存储。
 - `SettingsService.cs`：保存非敏感界面设置并管理开机启动。启用时注册当前用户的 Task Scheduler 登录任务（延迟 5 秒、交互令牌、不提权）并清除旧的 Run 注册表值；Task Scheduler 不可用时回退到 Run 值。

@@ -16,7 +16,7 @@
 
 ## 本地存储
 
-`%LOCALAPPDATA%\QuotaLens\settings.json` 只保存刷新间隔、开机启动、置顶、透明度和窗口位置。启用开机启动时，程序在 Windows 任务计划程序中为当前用户注册一个名为 `QuotaLens` 的登录任务，其中保存可执行文件路径；任务计划程序不可用时才回退到当前用户的 `Run` 注册表项。
+`%LOCALAPPDATA%\QuotaLens\settings.json` 只保存刷新间隔、开机启动、置顶、透明度、窗口位置和贴边方向。启用开机启动时，程序在 Windows 任务计划程序中为当前用户注册一个名为 `QuotaLens` 的登录任务，其中保存可执行文件路径；任务计划程序不可用时才回退到当前用户的 `Run` 注册表项。
 
 `%LOCALAPPDATA%\QuotaLens\startup.log` 记录程序的启动、退出、开机启动注册结果和未处理错误，每行只含时间、版本、启动参数和简短信息，保留最近 200 行。
 

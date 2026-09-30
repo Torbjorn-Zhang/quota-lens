@@ -16,7 +16,7 @@ English | [简体中文](PRIVACY.md)
 
 ## Local storage
 
-`%LOCALAPPDATA%\QuotaLens\settings.json` stores only the refresh interval, launch-at-sign-in preference, always-on-top state, opacity, and window position. When launch at sign-in is enabled, a per-user Task Scheduler logon task named `QuotaLens` stores the executable path; the current user's `Run` registry key is used only as a fallback when Task Scheduler is unavailable.
+`%LOCALAPPDATA%\QuotaLens\settings.json` stores only the refresh interval, launch-at-sign-in preference, always-on-top state, opacity, window position, and docked edge. When launch at sign-in is enabled, a per-user Task Scheduler logon task named `QuotaLens` stores the executable path; the current user's `Run` registry key is used only as a fallback when Task Scheduler is unavailable.
 
 `%LOCALAPPDATA%\QuotaLens\startup.log` records start, exit, autostart registration results, and unhandled errors. Each line holds only a timestamp, the version, launch arguments, and a short message; the last 200 lines are kept.
 

@@ -414,6 +414,48 @@ Run("Low quota alerts are coalesced and persisted", () =>
     Equal(1, afterReset.Alerts.Count);
 });
 
+Run("Dock placement snaps, holds, and releases", () =>
+{
+    const double workLeft = 0;
+    const double workRight = 1920;
+    // Floating: snap within 24 DIP of an edge, or when pushed past it.
+    Equal(DockEdge.Right, DockPlacement.Resolve(DockEdge.None, 1512, 1900, workLeft, workRight));
+    Equal(DockEdge.Right, DockPlacement.Resolve(DockEdge.None, 1552, 1940, workLeft, workRight));
+    Equal(DockEdge.Left, DockPlacement.Resolve(DockEdge.None, 10, 398, workLeft, workRight));
+    Equal(DockEdge.None, DockPlacement.Resolve(DockEdge.None, 700, 1088, workLeft, workRight));
+    Equal(DockEdge.None, DockPlacement.Resolve(DockEdge.None, 1480, 1868, workLeft, workRight));
+    // Docked: a short drag snaps back, a long one releases, a drag across re-docks on the other side.
+    Equal(DockEdge.Right, DockPlacement.Resolve(DockEdge.Right, 1492, 1880, workLeft, workRight));
+    Equal(DockEdge.None, DockPlacement.Resolve(DockEdge.Right, 1400, 1788, workLeft, workRight));
+    Equal(DockEdge.Left, DockPlacement.Resolve(DockEdge.Right, 0, 388, workLeft, workRight));
+    Equal(DockEdge.Left, DockPlacement.Resolve(DockEdge.Left, 40, 428, workLeft, workRight));
+    // An edge shared with a neighbouring monitor is passed as infinity and never snaps.
+    Equal(DockEdge.None, DockPlacement.Resolve(DockEdge.None, 2160, 2548, 0, double.PositiveInfinity));
+    Equal(DockEdge.Left, DockPlacement.Resolve(DockEdge.None, 5, 393, 0, double.PositiveInfinity));
+    Equal(DockEdge.None, DockPlacement.Resolve(DockEdge.None, 2565, 2953, double.NegativeInfinity, 5120));
+});
+
+Run("Docked top stays inside the work area", () =>
+{
+    Equal(470d, DockPlacement.ClampTop(470, 300, 0, 1040, 16));
+    Equal(-16d, DockPlacement.ClampTop(-200, 300, 0, 1040, 16));
+    Equal(724d, DockPlacement.ClampTop(900, 300, 0, 1040, 16));
+    Equal(-16d, DockPlacement.ClampTop(470, 2000, 0, 1040, 16));
+});
+
+Run("Settings default to a right-docked sidebar", () =>
+{
+    var legacy = JsonSerializer.Deserialize<AppSettings>("{\"PollSeconds\":60,\"WindowTop\":470}")!;
+    Equal(DockEdge.Right, legacy.DockEdge);
+    var floating = JsonSerializer.Deserialize<AppSettings>("{\"DockEdge\":\"None\"}")!;
+    Equal(DockEdge.None, floating.DockEdge);
+    Contains(
+        "\"DockEdge\": \"Left\"",
+        JsonSerializer.Serialize(
+            new AppSettings { DockEdge = DockEdge.Left },
+            new JsonSerializerOptions { WriteIndented = true }));
+});
+
 if (args.Contains("--live", StringComparer.OrdinalIgnoreCase))
 {
     await RunLiveAsync();

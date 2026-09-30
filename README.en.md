@@ -23,6 +23,7 @@ Quota Lens is a lightweight, translucent Windows desktop widget that shows subsc
 - Applies 5/10/20/30-minute backoff after Claude HTTP 429 responses while keeping the last successful result
 - Low-quota notifications can be disabled from the tray; when enabled, simultaneous alerts are combined and each reset period is notified only once
 - Translucent movable widget with always-on-top, tray mode, and opacity controls
+- Edge sidebar: dragged to the left or right screen edge, it collapses into a slim strip of mini gauges, slides the full panel out on hover, and tucks it back when the cursor leaves
 - Turns off all displays with one click while preventing automatic system sleep; mouse or keyboard input wakes the displays
 - Optional launch at Windows sign-in
 - Never persists OAuth tokens or writes credential/request logs
@@ -47,7 +48,8 @@ The current release is not commercially code-signed, so Windows SmartScreen may 
 ## Use
 
 - Drag the top header to move the widget.
-- Select `↻` to refresh and `◇` to toggle always-on-top.
+- Drag it against the left or right screen edge to dock it as a sidebar. It then shows only a slim strip with mini gauges for each Codex and Claude quota window and the 5-hour remaining percentage; rest the cursor on the strip to slide out the full panel, which tucks back once the cursor leaves. Drag it away from the edge to float it again, or toggle “Edge sidebar” (贴边侧栏) from the tray menu. The docked strip always stays on top.
+- Select `↻` to refresh and `◇` to toggle always-on-top (floating mode only).
 - Select the moon button to turn off the displays while keeping the computer awake.
 - `×` hides the window to the tray; choose “Exit” from the tray menu to stop the app.
 - Hovering over the widget temporarily increases its opacity.

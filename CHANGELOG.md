@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added / 新增
 
+- QQ-style edge sidebar: dragging the widget against the left or right screen edge docks it as a slim always-on-top strip with mini gauges per quota window and the 5-hour remaining percentage; resting the cursor on the strip slides the full panel out and moving away tucks it back; dragging it off the edge or the tray item "贴边侧栏" returns to the floating widget. Existing installs start docked to the right / QQ 式贴边侧栏：把小组件拖到屏幕左/右边缘即贴边为始终置顶的细竖条，显示每个额度窗口的迷你余量条和 5 小时剩余百分比；鼠标停在竖条上滑出完整面板，移开自动收回；拖离边缘或用托盘“贴边侧栏”可恢复悬浮窗。已安装用户升级后默认贴在右侧
 - Local `startup.log` next to `settings.json` records start, exit, autostart registration and unhandled errors (timestamps, version, arguments and short messages only; last 200 lines) / 在 `settings.json` 旁新增本地 `startup.log`，记录启动、退出、自启注册与未处理错误（仅时间、版本、参数和简短信息，保留最近 200 行）
 
 ### Changed / 变更

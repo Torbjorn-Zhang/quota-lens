@@ -56,9 +56,8 @@ public partial class MainWindow : Window
         {
             GlassFrame.Background = (System.Windows.Media.Brush)freezable.CloneCurrentValue();
         }
+        InitializeDocking();
         ApplyGlassOpacity(_settings.WidgetOpacity);
-        Topmost = _settings.AlwaysOnTop;
-        UpdatePinVisual();
 
         StartWithWindowsCheckBox.IsChecked = _settings.StartWithWindows;
         _settingsLoaded = true;
@@ -79,6 +78,11 @@ public partial class MainWindow : Window
         Loaded += async (_, _) =>
         {
             RestoreWindowPosition();
+            if (_expandOnLoad)
+            {
+                _expandOnLoad = false;
+                Expand(animate: true, grace: true);
+            }
             await RefreshAsync();
         };
     }
@@ -96,9 +100,17 @@ public partial class MainWindow : Window
         menu.Items.Add("立即刷新", null, async (_, _) => await RefreshAsync(forceClaudeRefresh: true));
         menu.Items.Add("息屏并持续保持运行", null, (_, _) =>
             Dispatcher.BeginInvoke(new Action(() => _ = TurnOffScreenAsync())));
+        _dockMenuItem = new Forms.ToolStripMenuItem("贴边侧栏")
+        {
+            Checked = IsDocked
+        };
+        _dockMenuItem.Click += (_, _) => Dispatcher.Invoke(ToggleDocking);
+        menu.Items.Add(_dockMenuItem);
+
         _pinMenuItem = new Forms.ToolStripMenuItem("窗口置顶")
         {
-            Checked = _settings.AlwaysOnTop
+            Checked = _settings.AlwaysOnTop,
+            Enabled = !IsDocked
         };
         _pinMenuItem.Click += (_, _) => Dispatcher.Invoke(ToggleAlwaysOnTop);
         menu.Items.Add(_pinMenuItem);
@@ -235,6 +247,7 @@ public partial class MainWindow : Window
                 ClaudeSecondaryBar,
                 ClaudeSecondaryReset);
             RenderClaudeScopedRows(_snapshot.Claude);
+            RenderStrip(_snapshot);
 
             UpdatedText.Text = $"更新 {_snapshot.FetchedAt:HH:mm:ss} · {_settings.PollSeconds}s";
             UpdateTrayText();
@@ -527,7 +540,7 @@ public partial class MainWindow : Window
         try
         {
             DragMove();
-            SaveWindowState();
+            OnDragCompleted();
         }
         catch (InvalidOperationException)
         {
@@ -585,21 +598,25 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Toggles the floating-mode preference. A docked sidebar is always topmost regardless, so the
+    /// pin button is hidden and the tray item disabled while docked.
+    /// </summary>
     private void ToggleAlwaysOnTop()
     {
-        Topmost = !Topmost;
-        _settings.AlwaysOnTop = Topmost;
-        UpdatePinVisual();
+        _settings.AlwaysOnTop = !_settings.AlwaysOnTop;
+        ApplyTopmost();
         _settingsService.Save(_settings);
     }
 
     private void UpdatePinVisual()
     {
-        PinButton.Foreground = Topmost ? Brush("#7C8CFF") : Brush("#CDE0EDFF");
-        PinButton.Background = Topmost ? Brush("#287C8CFF") : Brush("#14FFFFFF");
-        PinButton.Content = Topmost ? "◆" : "◇";
-        PinButton.ToolTip = Topmost ? "取消置顶" : "置顶";
-        if (_pinMenuItem is not null) _pinMenuItem.Checked = Topmost;
+        var pinned = _settings.AlwaysOnTop;
+        PinButton.Foreground = pinned ? Brush("#7C8CFF") : Brush("#CDE0EDFF");
+        PinButton.Background = pinned ? Brush("#287C8CFF") : Brush("#14FFFFFF");
+        PinButton.Content = pinned ? "◆" : "◇";
+        PinButton.ToolTip = pinned ? "取消置顶" : "置顶";
+        if (_pinMenuItem is not null) _pinMenuItem.Checked = pinned;
     }
 
     private void SetGlassOpacity(double opacity)
@@ -613,6 +630,8 @@ public partial class MainWindow : Window
     private void ApplyGlassOpacity(double opacity)
     {
         if (GlassFrame.Background is System.Windows.Media.Brush brush) brush.Opacity = opacity;
+        // The strip sits over arbitrary content at the screen edge, so keep it a little denser.
+        if (StripFrame.Background is System.Windows.Media.Brush strip) strip.Opacity = Math.Min(0.96, opacity + 0.12);
     }
 
     private void UpdateOpacityMenu()
@@ -623,24 +642,12 @@ public partial class MainWindow : Window
         }
     }
 
-    private void RestoreWindowPosition()
-    {
-        if (_settings.WindowLeft is not double left || _settings.WindowTop is not double top) return;
-        var visible = left + Width > SystemParameters.VirtualScreenLeft
-                      && left < SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth
-                      && top + Height > SystemParameters.VirtualScreenTop
-                      && top < SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight;
-        if (!visible) return;
-        Left = left;
-        Top = top;
-    }
-
     private void SaveWindowState()
     {
         if (!IsLoaded || WindowState != WindowState.Normal) return;
         _settings.WindowLeft = Left;
-        _settings.WindowTop = Top;
-        _settings.AlwaysOnTop = Topmost;
+        // While docked the strip's anchor is saved, not the (possibly shifted) expanded panel top.
+        _settings.WindowTop = IsDocked ? _dockTop : Top;
         _settingsService.Save(_settings);
     }
 
@@ -667,6 +674,7 @@ public partial class MainWindow : Window
     private void HideToTray()
     {
         SaveWindowState();
+        Collapse(animate: false);
         Hide();
         WindowState = WindowState.Normal;
         if (_trayIcon is not null && !_hasShownTrayTip)
@@ -684,6 +692,17 @@ public partial class MainWindow : Window
         Show();
         WindowState = WindowState.Normal;
         Activate();
+        if (!IsDocked) return;
+
+        // Loaded (which docks the window collapsed) runs after the first Show returns.
+        if (IsLoaded)
+        {
+            Expand(animate: true, grace: true);
+        }
+        else
+        {
+            _expandOnLoad = true;
+        }
     }
 
     private void ExitApplication()
@@ -693,6 +712,7 @@ public partial class MainWindow : Window
         _refreshCancellation?.Cancel();
         _refreshTimer.Stop();
         _countdownTimer.Stop();
+        ShutdownDocking();
         StopKeepingAwake();
         _quotaService.Dispose();
         if (_trayIcon is not null)
