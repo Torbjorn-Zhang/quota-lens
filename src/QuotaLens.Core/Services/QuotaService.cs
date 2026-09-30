@@ -24,7 +24,7 @@ public sealed class QuotaService : IDisposable
         {
             Timeout = TimeSpan.FromSeconds(15)
         };
-        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("QuotaLens/0.1 Windows");
+        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd($"QuotaLens/{AppPaths.Version} {AppPaths.PlatformName}");
     }
 
     public async Task<QuotaSnapshot> FetchAsync(
@@ -74,6 +74,7 @@ public sealed class QuotaService : IDisposable
 
         try
         {
+            if (forceRefresh) CredentialReader.AllowKeychainRetry();
             var credential = await CredentialReader.ReadClaudeAsync(cancellationToken);
             using var request = new HttpRequestMessage(HttpMethod.Get, ClaudeUsageUrl);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", credential.AccessToken);

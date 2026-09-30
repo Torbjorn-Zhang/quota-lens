@@ -472,45 +472,22 @@ public partial class MainWindow : Window
     private static string PrimaryRemaining(ProviderQuota quota) =>
         quota.IsAvailable ? $"{quota.Windows[0].RemainingPercent:0}%" : "未连接";
 
-    private static string FormatReset(DateTimeOffset? resetAt)
-    {
-        if (resetAt is null) return "重置时间未知";
-        var remaining = resetAt.Value - DateTimeOffset.Now;
-        if (remaining <= TimeSpan.Zero) return "额度窗口正在重置";
-
-        var countdown = remaining.TotalDays >= 1
-            ? $"{(int)remaining.TotalDays}天{remaining.Hours}时"
-            : remaining.TotalHours >= 1
-                ? $"{(int)remaining.TotalHours}时{remaining.Minutes}分"
-                : $"{Math.Max(0, remaining.Minutes)}分{Math.Max(0, remaining.Seconds)}秒";
-        return $"{countdown}后 · {resetAt.Value.LocalDateTime:M/d HH:mm}";
-    }
+    private static string FormatReset(DateTimeOffset? resetAt) =>
+        QuotaWindowLegend.FormatResetCountdown(resetAt, DateTimeOffset.Now);
 
     /// <summary>
-    /// Fixed colour per window kind, shared by the panel and the sidebar strip: blue for the
+    /// Fixed colour per window kind (palette shared with the macOS app through Core): blue for the
     /// 5-hour session, violet for the 7-day allowance, green for model allowances such as Fable.
     /// </summary>
     private static SolidColorBrush IdentityBrush(QuotaWindow window) =>
-        QuotaWindowLegend.Classify(window) switch
-        {
-            QuotaWindowKind.Session => Brush("#4CC9F0"),
-            QuotaWindowKind.Weekly => Brush("#B18CFF"),
-            QuotaWindowKind.Model => Brush("#38D6A3"),
-            _ => Brush("#9DB2C8")
-        };
+        Brush(QuotaWindowLegend.IdentityHex(window));
 
     /// <summary>Bars keep their identity colour until the window is nearly exhausted.</summary>
-    private static SolidColorBrush BarBrush(QuotaWindow window) =>
-        window.RemainingPercent <= 20 ? Brush("#FF6B7A") : IdentityBrush(window);
+    private static SolidColorBrush BarBrush(QuotaWindow window) => Brush(QuotaWindowLegend.BarHex(window));
 
     /// <summary>Percentages warn in orange at 40% or less and red at 20% or less.</summary>
     private static SolidColorBrush LevelBrush(double remaining, SolidColorBrush normal) =>
-        remaining switch
-        {
-            <= 20 => Brush("#FF6B7A"),
-            <= 40 => Brush("#FFB454"),
-            _ => normal
-        };
+        QuotaWindowLegend.LevelHex(remaining) is string hex ? Brush(hex) : normal;
 
     private static SolidColorBrush Brush(string color) =>
         new((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(color));

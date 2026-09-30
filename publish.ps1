@@ -5,8 +5,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $project = Join-Path $PSScriptRoot "QuotaLens.csproj"
-[xml]$projectXml = Get-Content -Raw -LiteralPath $project
-$version = [string]($projectXml.Project.PropertyGroup.Version | Select-Object -First 1)
+[xml]$propsXml = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot "Directory.Build.props")
+$version = [string]($propsXml.Project.PropertyGroup.Version | Select-Object -First 1)
 if ([string]::IsNullOrWhiteSpace($version)) { $version = "dev" }
 $output = Join-Path $PSScriptRoot "artifacts\$Runtime-v$version"
 $selfContained = if ($FrameworkDependent) { "false" } else { "true" }

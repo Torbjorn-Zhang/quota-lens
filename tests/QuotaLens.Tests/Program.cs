@@ -479,6 +479,33 @@ Run("Sidebar reset times are compact", () =>
     Equal("13:30", QuotaWindowLegend.CompactReset(now.AddHours(3.5).ToUniversalTime(), now));
 });
 
+Run("macOS Claude Desktop cache decrypts like Chromium", () =>
+{
+    // Known-answer vector produced independently on macOS with Python's hashlib.pbkdf2_hmac and
+    // LibreSSL's `openssl enc -aes-128-cbc` (IV of 16 spaces), then prefixed with "v10".
+    var key = CredentialReader.DeriveMacSafeStorageKey(
+        System.Text.Encoding.ASCII.GetBytes("quota-lens-test-password"));
+    Equal("fcdf375a54625daedb5b886439cea501", Convert.ToHexString(key).ToLowerInvariant());
+
+    var blob = Convert.FromBase64String(
+        "djEwJSu9VAuHA/dQlDFsKf626WQ81CB87YMDPFrsWXIKEqvtYCzoYFflQz9Kwt013OxxU/36mJv1aqmMOclTLhggZA==");
+    var plaintext = System.Text.Encoding.UTF8.GetString(CredentialReader.DecryptMacSafeStorage(blob, key));
+    Equal("{\"user:profile\":{\"token\":\"t0k3n\",\"expiresAt\":42}}", plaintext);
+
+    using var cache = JsonDocument.Parse(plaintext);
+    Equal("t0k3n", CredentialReader.FindClaudeDesktopCredential(cache.RootElement)?.AccessToken);
+
+    try
+    {
+        CredentialReader.DecryptMacSafeStorage(blob[..^1], key);
+        throw new Exception("A truncated payload must be rejected.");
+    }
+    catch (System.Security.Cryptography.CryptographicException)
+    {
+        // Expected.
+    }
+});
+
 Run("Settings default to a right-docked sidebar", () =>
 {
     var legacy = JsonSerializer.Deserialize<AppSettings>("{\"PollSeconds\":60,\"WindowTop\":470}")!;
