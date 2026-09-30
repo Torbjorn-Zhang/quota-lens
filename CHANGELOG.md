@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Planned / 计划
+
+- In-app language switching / 应用内语言切换
+- Signed installer and update channel / 签名安装包与更新通道
+
+## [0.5.0] - 2026-10-01
+
 ### Added / 新增
 
 - QQ-style edge sidebar: dragging the widget against the left or right screen edge docks it as a slim always-on-top strip with concentric ring gauges per service (outer 5-hour, middle 7-day, inner model allowance) and a row per window with the remaining percentage and reset time (clock time within 24 hours, otherwise the date); resting the cursor on the strip slides the full panel out and moving away tucks it back; dragging it off the edge or the tray item "贴边侧栏" returns to the floating widget. Existing installs start docked to the right / QQ 式贴边侧栏：把小组件拖到屏幕左/右边缘即贴边为始终置顶的细竖条，每个服务一组同心圆（外圈 5 小时、中圈 7 天、内圈模型专项），下方逐行列出剩余百分比和重置时间（24 小时内显示时刻，否则显示日期）；鼠标停在竖条上滑出完整面板，移开自动收回；拖离边缘或用托盘“贴边侧栏”可恢复悬浮窗。已安装用户升级后默认贴在右侧
@@ -16,10 +23,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Each quota type now has a fixed colour shared by the panel and the sidebar strip (blue 5-hour, violet 7-day, green model allowances such as Fable), with the panel's window names tinted as the legend; rings and bars turn red at 20% or less and percentages warn in orange at 40% and red at 20%. Previously every bar was coloured by remaining level only / 每种额度类型使用固定颜色，面板与侧栏一致（蓝色 5 小时、紫色 7 天、绿色模型专项如 Fable），面板中的窗口名称按同色标注作为图例；余量不超过 20% 时圆环和条形变红，百分比在 40% 以下变橙、20% 以下变红。此前所有条形只按余量高低着色
 - "Start with Windows" now registers a per-user Task Scheduler logon task (5-second delay, interactive token, no elevation) instead of a Run registry value, which Windows 11 Explorer was observed to skip silently at sign-in; the Run value is removed on upgrade and only used as a fallback when Task Scheduler is unavailable / “开机启动”改为注册当前用户的 Task Scheduler 登录任务（延迟 5 秒、交互令牌、不提权），不再写 Run 注册表值；实测 Windows 11 的 Explorer 会在登录时静默跳过该值。升级后自动清除旧的 Run 值，仅在 Task Scheduler 不可用时回退
 
-### Planned / 计划
+### Fixed / 修复
 
-- In-app language switching / 应用内语言切换
-- Signed installer and update channel / 签名安装包与更新通道
+- The saved window position is restored on launch again; WPF re-centred the window after it had been placed, and the always-on-top preference is no longer overwritten when the position is saved / 启动时重新正确恢复上次的窗口位置（此前 WPF 会在放置后再次居中）；保存位置时不再覆盖“置顶”偏好
 
 ## [0.4.7] - 2026-09-04
 
@@ -86,7 +92,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - Initial Codex and Claude Code quota monitoring / 初始 Codex 与 Claude Code 额度监控
 
-[Unreleased]: https://github.com/Torbjorn-Zhang/quota-lens/compare/v0.4.7...HEAD
+[Unreleased]: https://github.com/Torbjorn-Zhang/quota-lens/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.5.0
 [0.4.7]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.4.7
 [0.4.6]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.4.6
 [0.3.3]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.3.3
