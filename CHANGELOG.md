@@ -11,6 +11,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - In-app language switching / 应用内语言切换
 - Signed installer and update channel / 签名安装包与更新通道
 
+## [0.6.2] - 2026-10-02
+
+### Changed / 变更
+
+- macOS: the menu bar thumbnail drops the solid plate added in 0.6.1 and keeps a transparent background; its text and ring arcs get a thin outline instead (dark glass on dark menu bars, white on light ones), which keeps the same 4.5:1 contrast over bright or busy wallpapers / macOS：菜单栏缩略图去掉 0.6.1 加的实心底板，恢复透明背景，改为给文字和圆环加一圈细描边（深色菜单栏为深色描边、浅色菜单栏为白色描边），在亮色或花哨的壁纸上仍保持 4.5:1 的对比度
+
 ## [0.6.1] - 2026-10-02
 
 ### Changed / 变更
@@ -116,7 +122,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - Initial Codex and Claude Code quota monitoring / 初始 Codex 与 Claude Code 额度监控
 
-[Unreleased]: https://github.com/Torbjorn-Zhang/quota-lens/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/Torbjorn-Zhang/quota-lens/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.6.2
 [0.6.1]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.6.1
 [0.6.0]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.6.0
 [0.5.0]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.5.0
