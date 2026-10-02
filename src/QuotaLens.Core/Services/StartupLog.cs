@@ -12,10 +12,7 @@ internal static class StartupLog
     private const int MaxLines = 200;
     private static readonly object Gate = new();
 
-    internal static string LogPath { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "QuotaLens",
-        "startup.log");
+    internal static string LogPath { get; } = Path.Combine(AppPaths.DataDirectory, "startup.log");
 
     internal static void Write(string message)
     {

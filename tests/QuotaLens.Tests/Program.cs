@@ -479,6 +479,46 @@ Run("Sidebar reset times are compact", () =>
     Equal("13:30", QuotaWindowLegend.CompactReset(now.AddHours(3.5).ToUniversalTime(), now));
 });
 
+Run("Menu bar countdowns are compact", () =>
+{
+    var now = new DateTimeOffset(2026, 10, 1, 1, 40, 0, TimeSpan.Zero);
+    Equal("—", QuotaWindowLegend.CompactCountdown(null, now));
+    Equal("0m", QuotaWindowLegend.CompactCountdown(now.AddSeconds(-5), now));
+    Equal("1m", QuotaWindowLegend.CompactCountdown(now.AddSeconds(20), now));
+    Equal("42m", QuotaWindowLegend.CompactCountdown(now.AddMinutes(42), now));
+    Equal("2h01m", QuotaWindowLegend.CompactCountdown(now.AddHours(2).AddMinutes(1).AddSeconds(30), now));
+    Equal("23h59m", QuotaWindowLegend.CompactCountdown(now.AddHours(23).AddMinutes(59), now));
+    Equal("1d0h", QuotaWindowLegend.CompactCountdown(now.AddDays(1), now));
+    Equal("2d14h", QuotaWindowLegend.CompactCountdown(now.AddDays(2).AddHours(14).AddMinutes(20), now));
+});
+
+Run("macOS Claude Desktop cache decrypts like Chromium", () =>
+{
+    // Known-answer vector produced independently on macOS with Python's hashlib.pbkdf2_hmac and
+    // LibreSSL's `openssl enc -aes-128-cbc` (IV of 16 spaces), then prefixed with "v10".
+    var key = CredentialReader.DeriveMacSafeStorageKey(
+        System.Text.Encoding.ASCII.GetBytes("quota-lens-test-password"));
+    Equal("fcdf375a54625daedb5b886439cea501", Convert.ToHexString(key).ToLowerInvariant());
+
+    var blob = Convert.FromBase64String(
+        "djEwJSu9VAuHA/dQlDFsKf626WQ81CB87YMDPFrsWXIKEqvtYCzoYFflQz9Kwt013OxxU/36mJv1aqmMOclTLhggZA==");
+    var plaintext = System.Text.Encoding.UTF8.GetString(CredentialReader.DecryptMacSafeStorage(blob, key));
+    Equal("{\"user:profile\":{\"token\":\"t0k3n\",\"expiresAt\":42}}", plaintext);
+
+    using var cache = JsonDocument.Parse(plaintext);
+    Equal("t0k3n", CredentialReader.FindClaudeDesktopCredential(cache.RootElement)?.AccessToken);
+
+    try
+    {
+        CredentialReader.DecryptMacSafeStorage(blob[..^1], key);
+        throw new Exception("A truncated payload must be rejected.");
+    }
+    catch (System.Security.Cryptography.CryptographicException)
+    {
+        // Expected.
+    }
+});
+
 Run("Settings default to a right-docked sidebar", () =>
 {
     var legacy = JsonSerializer.Deserialize<AppSettings>("{\"PollSeconds\":60,\"WindowTop\":470}")!;

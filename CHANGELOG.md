@@ -11,6 +11,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - In-app language switching / 应用内语言切换
 - Signed installer and update channel / 签名安装包与更新通道
 
+## [0.6.0] - 2026-10-02
+
+### Added / 新增
+
+- macOS menu bar app (Apple Silicon and Intel, macOS 11+): the menu bar thumbnail shows Codex and Claude as two sets of concentric rings, each with the 5-hour and 7-day remaining percentage and reset countdown beside it (for example `77% 2h01m`); a click drops the ring panel below the icon with each quota window's remaining percentage and a live reset countdown, plus refresh, display-off-while-awake, launch at login (a per-user LaunchAgent), and low-quota notifications. Released as ad-hoc signed `QuotaLens-*-macos-arm64.zip` / `-x64.zip` / 新增 macOS 菜单栏应用（Apple Silicon 与 Intel，macOS 11 及以上）：菜单栏缩略图用两组同心圆显示 Codex 与 Claude，旁边各有 5 小时与 7 天的剩余百分比和重置倒计时（如 `77% 2h01m`）；点一下在图标下方弹出同心圆详情面板，逐项显示剩余百分比与实时重置倒计时，并提供刷新、息屏保持运行、登录时启动（当前用户 LaunchAgent）和低额度通知。以临时签名的 `QuotaLens-*-macos-arm64.zip` / `-x64.zip` 发布
+- One-step macOS installer `install-mac.sh` (`curl -fsSL …/install-mac.sh | bash`): installs the latest macOS release after a SHA-256 check, or builds from source when no release has one (no Git, Xcode, or admin rights; the ~1.3 GB of SDK and packages stays in a temporary folder that is deleted afterwards), replaces a running copy, and starts the app; `Install-QuotaLens.command` runs it by double-click from a checkout / macOS 一键安装脚本 `install-mac.sh`（`curl -fsSL …/install-mac.sh | bash`）：校验 SHA-256 后安装最新 macOS 发布版，没有发布版时改为本机从源码构建（不需要 Git、Xcode 或管理员权限，约 1.3 GB 的 SDK 与构建包放在临时目录、装完即删），自动替换正在运行的旧版并启动；克隆仓库后可双击 `Install-QuotaLens.command`
+- macOS credential support: Claude Desktop's safe-storage cache is decrypted with the “Claude Safe Storage” keychain password (Chromium's macOS scheme), and the Claude Code CLI's “Claude Code-credentials” keychain item is read; keychain prompts never stall the other provider's refresh / 支持 macOS 凭据：用钥匙串“Claude Safe Storage”密码按 Chromium 的 macOS 方案解密 Claude 桌面版缓存，并读取 Claude Code 命令行的“Claude Code-credentials”钥匙串项；等待钥匙串授权时不影响另一个服务的刷新
+
+### Changed / 变更
+
+- Quota logic moved into a cross-platform `src/QuotaLens.Core` library shared by the Windows (WPF) and macOS (Avalonia) apps; the parser checks now run on both Windows and macOS CI, and releases include the macOS builds / 额度逻辑移入跨平台的 `src/QuotaLens.Core`，由 Windows（WPF）与 macOS（Avalonia）两端共用；解析器测试在 Windows 与 macOS CI 上都会运行，发布包含 macOS 版本
+
 ## [0.5.0] - 2026-10-01
 
 ### Added / 新增
@@ -92,7 +104,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - Initial Codex and Claude Code quota monitoring / 初始 Codex 与 Claude Code 额度监控
 
-[Unreleased]: https://github.com/Torbjorn-Zhang/quota-lens/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/Torbjorn-Zhang/quota-lens/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.6.0
 [0.5.0]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.5.0
 [0.4.7]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.4.7
 [0.4.6]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.4.6

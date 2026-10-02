@@ -1,12 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <!-- Cross-platform: exercises the shared Core library on both the Windows and macOS CI runners. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>QuotaLens.Tests</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\QuotaLens.csproj" />
+    <ProjectReference Include="..\..\src\QuotaLens.Core\QuotaLens.Core.csproj" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,72 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="QuotaLens.Mac.PanelView"
+             Width="372"
+             FontFamily="PingFang SC, Helvetica Neue, Segoe UI, Microsoft YaHei UI"
+             Foreground="#F3F7FF">
+    <!--
+      Self-contained: every visual is set directly rather than through styles or control
+      templates, so the same view renders identically in the window and in off-screen previews.
+    -->
+    <Border x:Name="Frame" Margin="12" Padding="16,12,16,12" CornerRadius="20"
+            Background="#F20F1526" BorderBrush="#38FFFFFF" BorderThickness="1"
+            BoxShadow="0 10 30 0 #8C000000">
+        <StackPanel Spacing="10">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border Width="29" Height="29" CornerRadius="10" VerticalAlignment="Center">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                            <GradientStop Color="#807C8CFF" Offset="0" />
+                            <GradientStop Color="#7038D6A3" Offset="1" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <TextBlock Text="Q" FontSize="13" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="QUOTA LENS" FontSize="11" FontWeight="SemiBold" Foreground="#E8F2FF" />
+                    <TextBlock x:Name="UpdatedText" Text="正在获取额度" FontSize="11" Foreground="#9DB2C8" Margin="0,2,0,0" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Border x:Name="RefreshButton" Width="30" Height="30" CornerRadius="10"
+                            Background="#14FFFFFF" BorderBrush="#20FFFFFF" BorderThickness="1"
+                            Cursor="Hand" ToolTip.Tip="立即刷新">
+                        <TextBlock Text="↻" FontSize="14" Foreground="#CDE0ED"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <Border x:Name="CloseButton" Width="30" Height="30" CornerRadius="10"
+                            Background="#14FFFFFF" BorderBrush="#20FFFFFF" BorderThickness="1"
+                            Cursor="Hand" ToolTip.Tip="收起">
+                        <TextBlock Text="×" FontSize="15" Foreground="#CDE0ED"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                </StackPanel>
+            </Grid>
+
+            <!-- One card per provider, generated in code-behind. -->
+            <StackPanel x:Name="ProvidersHost" Spacing="10" />
+
+            <!-- Settings and actions (the menu bar icon opens this panel directly, so there is no menu). -->
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+                <Border x:Name="LaunchAtLoginToggle" CornerRadius="9" Padding="9,4" BorderThickness="1" Cursor="Hand">
+                    <TextBlock x:Name="LaunchAtLoginText" Text="登录时启动" FontSize="11" />
+                </Border>
+                <Border x:Name="AlertsToggle" Grid.Column="1" Margin="6,0,0,0" CornerRadius="9" Padding="9,4"
+                        BorderThickness="1" Cursor="Hand">
+                    <TextBlock x:Name="AlertsText" Text="低额度提醒" FontSize="11" />
+                </Border>
+                <Border x:Name="ScreenOffButton" Grid.Column="3" CornerRadius="9" Padding="9,4"
+                        Background="#14FFFFFF" BorderBrush="#20FFFFFF" BorderThickness="1" Cursor="Hand"
+                        ToolTip.Tip="关闭显示器并保持电脑运行">
+                    <TextBlock Text="息屏" FontSize="11" Foreground="#CDE0ED" />
+                </Border>
+                <Border x:Name="QuitButton" Grid.Column="4" Margin="6,0,0,0" CornerRadius="9" Padding="9,4"
+                        Background="#14FFFFFF" BorderBrush="#20FFFFFF" BorderThickness="1" Cursor="Hand">
+                    <TextBlock Text="退出" FontSize="11" Foreground="#CDE0ED" />
+                </Border>
+            </Grid>
+
+            <TextBlock Text="Codex 60 秒 · Claude 3 分钟 · 点击别处收起" FontSize="10.5" Foreground="#7F93AE" />
+        </StackPanel>
+    </Border>
+</UserControl>

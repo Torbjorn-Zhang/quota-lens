@@ -24,7 +24,7 @@ internal static class RawUsageDump
         var credential = await CredentialReader.ReadClaudeAsync(CancellationToken.None);
         using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
         var version = typeof(QuotaService).Assembly.GetName().Version?.ToString(3) ?? "dev";
-        http.DefaultRequestHeaders.UserAgent.ParseAdd($"QuotaLens/{version} Windows");
+        http.DefaultRequestHeaders.UserAgent.ParseAdd($"QuotaLens/{version} {AppPaths.PlatformName}");
         using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.anthropic.com/api/oauth/usage");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", credential.AccessToken);
         request.Headers.TryAddWithoutValidation("anthropic-beta", "oauth-2025-04-20");

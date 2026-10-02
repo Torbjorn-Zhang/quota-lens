@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Platform-neutral quota logic shared by the Windows (WPF) and macOS (Avalonia) apps. -->
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>QuotaLens.Core</AssemblyName>
+    <RootNamespace>QuotaLens</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Windows-only DPAPI for the Claude Desktop cache; guarded by OperatingSystem.IsWindows(). -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="6.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="QuotaLens" />
+    <InternalsVisibleTo Include="QuotaLens.Mac" />
+    <InternalsVisibleTo Include="QuotaLens.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -2,15 +2,16 @@
 
 [English](ARCHITECTURE.en.md) | 简体中文
 
-Quota Lens 是单进程 WPF 桌面应用，没有后台服务器或中转服务。
+Quota Lens 是单进程桌面应用，没有后台服务器或中转服务。额度逻辑集中在跨平台的 `src/QuotaLens.Core`（net6.0），由两套界面共用：Windows 版是仓库根目录的 WPF 应用，macOS 版是 `src/QuotaLens.Mac` 的 Avalonia 菜单栏应用。解析器测试只依赖 Core，在 Windows 与 macOS 的 CI 上都会运行。
 
 ```mermaid
 flowchart LR
     UI[WPF 小组件与托盘] --> QS[QuotaService]
+    MAC[macOS 菜单栏与面板] --> QS
     QS --> CR[CredentialReader]
     CR --> CX[Codex auth.json]
-    CR --> CC[Claude Code credentials]
-    CR --> CD[Claude Desktop DPAPI 缓存]
+    CR --> CC[Claude Code credentials / 钥匙串]
+    CR --> CD[Claude Desktop 缓存：Windows DPAPI / macOS 钥匙串]
     QS --> OA[OpenAI 额度服务]
     QS --> AN[Anthropic 额度服务]
     UI --> SS[SettingsService]
@@ -29,7 +30,10 @@ flowchart LR
 - `SettingsService.cs`：保存非敏感界面设置并管理开机启动。启用时注册当前用户的 Task Scheduler 登录任务（延迟 5 秒、交互令牌、不提权）并清除旧的 Run 注册表值；Task Scheduler 不可用时回退到 Run 值。
 - `LogonTask.cs`：通过 `Schedule.Service` COM 接口（后期绑定，无需 interop 程序集）创建、删除和查询登录任务。
 - `StartupLog.cs`：追加式本地诊断日志 `startup.log`，记录启动、退出、自启注册与未处理错误，只含时间、版本、参数和简短信息，保留最近 200 行。
-- `tests/QuotaLens.Tests`：使用合成 JSON 和临时加密样本验证解析与凭据选择，不需要真实账号。
+- `CredentialReader.cs`（macOS 部分）与 `MacKeychain.cs`：通过 Security.framework 读取钥匙串项。Claude 桌面版缓存按 Chromium 的 macOS 方案解密：钥匙串“Claude Safe Storage”密码经 PBKDF2-SHA1（`saltysalt`，1003 轮）派生 16 字节密钥，再用 AES-128-CBC（IV 为 16 个空格）解开 `v10` 数据。钥匙串授权对话框会阻塞读取，因此读取在后台进行，调用方最多等 20 秒后提示“正在等待授权”，Codex 照常刷新；拒绝授权后 30 分钟内不再自动弹窗，手动刷新可立即重试。派生出的密钥只在进程内存中缓存，避免“仅允许一次”时反复弹窗。
+- `QuotaWindowLegend.cs`：额度类型分类、两端共用的配色（蓝 5 小时、紫 7 天、绿模型专项，≤20% 红）与重置时间格式。
+- `src/QuotaLens.Mac`：`MacStatusItem` 通过 Objective-C 运行时直接创建菜单栏项。Avalonia 的 TrayIcon 在 macOS 上固定申请正方形状态栏项（`NSSquareStatusItemLength`），会把宽图标从中间裁掉，而且没有点击事件；这里改用 `NSVariableStatusItemLength`，并把点击回调到 .NET。`QuotaController` 在点击时切换详情面板（放在图标正下方），面板打开期间轮询 `NSEvent` 的按键状态和光标位置，在面板和图标以外按下鼠标即收起（无边框的辅助应用窗口不一定能成为 key window，不能只靠 Deactivated）。`TrayIconRenderer` 绘制菜单栏缩略图（Windows 贴边竖条的对应物）：每个服务的字母、同心圆，以及 5 小时与 7 天两行“剩余百分比 + 紧凑倒计时”（`QuotaWindowLegend.CompactCountdown`，如 `2h01m`、`2d14h`）；文字区按最宽可能值预留宽度，倒计时变化时菜单栏项宽度不变，每 30 秒重绘一次；`PanelView`/`PanelWindow` 是带实时倒计时的详情面板，底部是设置与操作按钮，`--self-test` 会记录状态栏项实际尺寸、模拟点击并把面板渲染成 PNG 以便远程核对，`MacPlatform` 负责登录启动（`~/Library/LaunchAgents` 中的 LaunchAgent）、通知（`osascript`）与息屏保持唤醒（`caffeinate` + `pmset displaysleepnow`）。`--render-preview <目录>` 用示例数据渲染图标、面板与应用图标 PNG，CI 会在 macOS 上运行它。
+- `tests/QuotaLens.Tests`：使用合成 JSON 和临时加密样本验证解析与凭据选择，不需要真实账号；macOS 解密用 Python `hashlib` 与 LibreSSL 独立生成的已知答案校验。
 
 ## 数据流原则
 
@@ -50,4 +54,4 @@ Claude 解析器会读取常规的 5 小时、7 天窗口，也会从 `limits[]`
 - Claude 429 采用指数退避，最大 30 分钟，并继续显示上次成功结果。
 - 用户手动刷新会绕过正常的 3 分钟 Claude 缓存，但不会绕过 429 退避。
 - 低额度提醒状态和开关保存在本地设置中；重置时间按分钟归一化，同一额度周期只通知一次，同时低额度会合并为一条通知。
-- 单实例互斥量只限制 `QuotaLens` 自身，不检查、终止或拦截 Claude/Codex 进程。
+- 单实例互斥量（macOS 上为数据目录中的独占锁文件）只限制 `QuotaLens` 自身，不检查、终止或拦截 Claude/Codex 进程。

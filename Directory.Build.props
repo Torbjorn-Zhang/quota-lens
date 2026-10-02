@@ -1,0 +1,6 @@
+<Project>
+  <!-- Single version for every project; publish scripts and the release workflow read it here. -->
+  <PropertyGroup>
+    <Version>0.6.0</Version>
+  </PropertyGroup>
+</Project>

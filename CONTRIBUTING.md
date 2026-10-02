@@ -12,15 +12,20 @@ Thank you for improving Quota Lens. 感谢你参与改进 Quota Lens。
 
 Requirements / 环境：
 
-- Windows 10/11
+- Windows 10/11 for the WPF app; macOS with the Xcode command line tools to package the macOS app / WPF 版需要 Windows 10/11；打包 macOS 版需要装有 Xcode 命令行工具的 macOS
 - .NET 6 SDK
 - Test accounts are optional; parser checks use synthetic fixtures. / 测试账号不是必需的，解析器检查使用合成数据。
 
+Layout / 结构：`src/QuotaLens.Core` holds all quota, credential, and palette logic shared by both apps; keep platform code out of it except behind `OperatingSystem.IsWindows()` / `IsMacOS()` guards. The Windows UI (WPF) is at the repository root and the macOS UI (Avalonia) is in `src/QuotaLens.Mac`. / `src/QuotaLens.Core` 是两端共用的额度、凭据与配色逻辑，平台相关代码只能放在 `OperatingSystem.IsWindows()` / `IsMacOS()` 判断之后；Windows 界面（WPF）在仓库根目录，macOS 界面（Avalonia）在 `src/QuotaLens.Mac`。
+
 ```powershell
-dotnet restore .\QuotaLens.csproj
+dotnet restore .\QuotaLens.sln
 dotnet build .\QuotaLens.csproj -c Release
+dotnet build .\src\QuotaLens.Mac\QuotaLens.Mac.csproj -c Release
 dotnet run --project .\tests\QuotaLens.Tests\QuotaLens.Tests.csproj -c Release
 ```
+
+macOS UI changes / macOS 界面改动：`dotnet run --project src/QuotaLens.Mac/QuotaLens.Mac.csproj -c Release -- --render-preview <dir>` renders the menu bar icon, the panel, and the app icon with sample data to PNG on any OS; `./publish-mac.sh osx-arm64` builds the signed `QuotaLens.app` on a Mac. / 在任意系统上用示例数据把菜单栏图标、面板和应用图标渲染为 PNG；在 Mac 上用 `./publish-mac.sh osx-arm64` 生成签名后的 `QuotaLens.app`。
 
 Diagnostics / 诊断：append `-- --raw-usage` to the test command to print the structural shape of the live Claude usage response; string values are masked except a short allowlist of structural keys (kind, resets_at, …), `scope.model.display_name`, and model ids starting with `claude-`. Use it when the upstream format changes. / 在测试命令后加 `-- --raw-usage` 可打印 Claude usage 响应的结构；除少数结构键（kind、resets_at 等）、`scope.model.display_name` 和 `claude-` 开头的模型 id 外，字符串值均脱敏，上游格式变化时用它排查。
 

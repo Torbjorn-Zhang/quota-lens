@@ -9,13 +9,22 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>QuotaLens</AssemblyName>
     <RootNamespace>QuotaLens</RootNamespace>
-    <Version>0.5.0</Version>
+    <!-- Version comes from Directory.Build.props. -->
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Remove="tests\**\*.cs" />
     <EmbeddedResource Remove="tests\**\*" />
     <None Remove="tests\**\*" />
+    <Compile Remove="src\**\*.cs" />
+    <EmbeddedResource Remove="src\**\*" />
+    <None Remove="src\**\*" />
+    <AvaloniaXaml Remove="src\**\*" />
+    <Page Remove="src\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="src\QuotaLens.Core\QuotaLens.Core.csproj" />
   </ItemGroup>
 
 </Project>

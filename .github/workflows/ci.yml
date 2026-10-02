@@ -9,7 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  build-and-test:
+  windows:
+    name: build-and-test (Windows)
     runs-on: windows-latest
     timeout-minutes: 15
 
@@ -23,10 +24,51 @@ jobs:
           dotnet-version: 6.0.x
 
       - name: Restore
-        run: dotnet restore .\QuotaLens.csproj
+        run: dotnet restore .\QuotaLens.sln
 
-      - name: Build
+      - name: Build Windows app
         run: dotnet build .\QuotaLens.csproj -c Release --no-restore --warnaserror
+
+      - name: Build macOS app (compile check)
+        run: dotnet build .\src\QuotaLens.Mac\QuotaLens.Mac.csproj -c Release --no-restore --warnaserror
 
       - name: Run parser checks
         run: dotnet run --project .\tests\QuotaLens.Tests\QuotaLens.Tests.csproj -c Release
+
+  macos:
+    name: build-and-test (macOS)
+    runs-on: macos-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 6
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 6.0.x
+
+      - name: Build shared core and macOS app
+        run: |
+          dotnet build src/QuotaLens.Core/QuotaLens.Core.csproj -c Release --warnaserror
+          dotnet build src/QuotaLens.Mac/QuotaLens.Mac.csproj -c Release --warnaserror
+
+      - name: Run parser checks
+        run: dotnet run --project tests/QuotaLens.Tests/QuotaLens.Tests.csproj -c Release
+
+      - name: Package QuotaLens.app (arm64)
+        run: ./publish-mac.sh osx-arm64
+
+      - name: Render previews from the packaged app
+        run: |
+          open -W -n artifacts/mac/osx-arm64/QuotaLens.app --args --render-preview "$PWD/artifacts/preview"
+          ls -la artifacts/preview
+
+      - name: Upload app and previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: quota-lens-macos-arm64
+          path: |
+            artifacts/QuotaLens-*-macos-arm64.zip
+            artifacts/preview/*.png
