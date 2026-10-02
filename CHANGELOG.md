@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed / 变更
+
+- macOS: the menu bar thumbnail now follows the style of Apple's own menu bar items. It is normally a monochrome template image in the system font that macOS tints like the clock and battery, legible on any wallpaper in either appearance; it replaces the outlined colour thumbnail of 0.6.2. Colour appears only as an alert, the way the battery turns red: a percentage at 40% or less turns system orange, at 20% or less system red, and a ring at 20% or less turns red / macOS：菜单栏缩略图改为与系统自带图标一致的风格：平时是使用系统字体的单色模板图，由 macOS 像时钟、电池一样自动着色，深浅色和任何壁纸下都看得清，取代 0.6.2 带描边的彩色缩略图；只有额度偏低时才出现颜色，就像电池电量低时变红：剩余 40% 及以下的数字变为系统橙，20% 及以下变为系统红，圆环在 20% 及以下变红
+
 ### Planned / 计划
 
 - In-app language switching / 应用内语言切换
