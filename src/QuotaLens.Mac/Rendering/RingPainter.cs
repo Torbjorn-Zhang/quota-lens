@@ -7,7 +7,8 @@ namespace QuotaLens.Mac.Rendering;
 /// <summary>
 /// Concentric quota rings, one per window from the outside in (5-hour, 7-day, model allowance, at
 /// most three): a faint full track plus a clockwise arc from twelve o'clock covering what remains,
-/// in the window's identity colour (red at 20% or less). Same geometry as the Windows sidebar.
+/// in the window's identity colour (red at 20% or less), deepened on light surfaces. Same geometry
+/// as the Windows sidebar.
 /// </summary>
 internal static class RingPainter
 {
@@ -19,7 +20,8 @@ internal static class RingPainter
         IReadOnlyList<QuotaWindow> windows,
         double stroke,
         double gap,
-        IBrush track)
+        IBrush track,
+        bool onLight = false)
     {
         var size = Math.Min(bounds.Width, bounds.Height);
         var center = bounds.Center;
@@ -38,7 +40,7 @@ internal static class RingPainter
             var fraction = Math.Clamp(window.RemainingPercent, 0, 100) / 100;
             if (fraction <= 0.005) continue;
 
-            var pen = new Pen(QuotaPalette.Bar(window), stroke, lineCap: PenLineCap.Round);
+            var pen = new Pen(QuotaPalette.Bar(window, onLight), stroke, lineCap: PenLineCap.Round);
             if (fraction >= 0.999)
             {
                 context.DrawEllipse(null, pen, center, radius, radius);

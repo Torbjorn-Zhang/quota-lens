@@ -83,7 +83,8 @@ internal static class TrayIconRenderer
             available ? quota!.Windows : Array.Empty<QuotaWindow>(),
             RingStroke,
             RingGap,
-            QuotaPalette.Hex(dark ? "#38FFFFFF" : "#30000000"));
+            QuotaPalette.Hex(dark ? "#38FFFFFF" : "#30000000"),
+            onLight: !dark);
 
         var textLeft = ringLeft + RingDiameter + RingToText;
         if (!available)
@@ -112,16 +113,7 @@ internal static class TrayIconRenderer
     private static IBrush LineBrush(QuotaWindow window, bool dark)
     {
         var hex = QuotaWindowLegend.LevelHex(window.RemainingPercent) ?? QuotaWindowLegend.IdentityHex(window);
-        if (dark) return QuotaPalette.Hex(hex);
-        return QuotaPalette.Hex(hex.ToUpperInvariant() switch
-        {
-            "#4CC9F0" => "#1587C4",
-            "#B18CFF" => "#7445D6",
-            "#38D6A3" => "#16926B",
-            "#FFB454" => "#C46A0C",
-            "#FF6B7A" => "#D6334A",
-            _ => "#4E5A6E"
-        });
+        return QuotaPalette.Hex(QuotaPalette.Shade(hex, onLight: !dark));
     }
 
     private static FormattedText Measure(string text, Typeface face, double size, IBrush brush) =>

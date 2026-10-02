@@ -463,6 +463,32 @@ Run("Quota windows get a kind for their identity colour", () =>
     Equal("Session,Weekly,Model", string.Join(",", kinds));
 });
 
+Run("Quota colours keep 4.5:1 on the surfaces they are drawn on", () =>
+{
+    var palette = new[]
+    {
+        QuotaWindowLegend.SessionHex, QuotaWindowLegend.WeeklyHex, QuotaWindowLegend.ModelHex,
+        QuotaWindowLegend.OtherHex, QuotaWindowLegend.WarningHex, QuotaWindowLegend.CriticalHex
+    };
+
+    // Worst cases for the dark palette: the macOS menu bar plate and the lightest stop of the Windows
+    // glass at reading density, each with a white wallpaper or desktop showing through.
+    var menuBarPlate = OverWhite("#0F1526", 0xE0 / 255.0);
+    var windowsGlass = OverWhite("#141B2E", 0xE4 / 255.0);
+    foreach (var hex in palette)
+    {
+        AtLeast(4.5, Contrast(Rgb(hex), menuBarPlate), $"{hex} on the menu bar plate");
+        AtLeast(4.5, Contrast(Rgb(hex), windowsGlass), $"{hex} on the Windows glass");
+
+        var light = QuotaWindowLegend.OnLightHex(hex);
+        if (hex != QuotaWindowLegend.OtherHex && light == QuotaWindowLegend.OnLightHex(QuotaWindowLegend.OtherHex))
+        {
+            throw new Exception($"{hex} has no light-surface counterpart.");
+        }
+        AtLeast(4.5, Contrast(Rgb(light), Rgb("#FFFFFF")), $"{light} on white");
+    }
+});
+
 Run("Sidebar reset times are compact", () =>
 {
     // A mid-September local time keeps the checks clear of daylight-saving transitions.
@@ -631,6 +657,33 @@ static void Equal<T>(T expected, T actual)
     {
         throw new Exception($"Expected '{expected}', got '{actual}'.");
     }
+}
+
+static void AtLeast(double minimum, double actual, string what)
+{
+    if (actual < minimum)
+    {
+        throw new Exception($"{what}: expected at least {minimum:0.0}, got {actual:0.00}.");
+    }
+}
+
+static double[] Rgb(string hex) =>
+    new[] { 1, 3, 5 }.Select(index => Convert.ToInt32(hex.Substring(index, 2), 16) / 255.0).ToArray();
+
+static double[] OverWhite(string hex, double alpha) =>
+    Rgb(hex).Select(channel => alpha * channel + (1 - alpha)).ToArray();
+
+// WCAG 2 contrast ratio of two sRGB colours.
+static double Contrast(double[] first, double[] second)
+{
+    static double Luminance(double[] rgb)
+    {
+        var linear = rgb.Select(c => c <= 0.04045 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4)).ToArray();
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+    }
+
+    var (a, b) = (Luminance(first), Luminance(second));
+    return (Math.Max(a, b) + 0.05) / (Math.Min(a, b) + 0.05);
 }
 
 static void Contains(string expected, string? actual)
