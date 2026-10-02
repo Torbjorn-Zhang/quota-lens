@@ -12,6 +12,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - macOS: the menu bar thumbnail sits on its own rounded plate (dark glass on dark menu bars, near-white on light ones), because the macOS 26 menu bar is transparent and bright or busy wallpapers washed the colours out; on light menu bars the rings now use the deeper light-surface shades like the text / macOS：菜单栏缩略图加了圆角底板（深色菜单栏用深色玻璃，浅色菜单栏用近白色），因为 macOS 26 的菜单栏是透明的，亮色或花哨的壁纸会让颜色看不清；浅色菜单栏上的圆环也和文字一样改用加深的颜色
 - Windows: the sidebar strip, and the panel while the cursor is on it or it is slid out of the sidebar, always use the full glass density, so a bright desktop no longer shows through; the transparency setting now applies only while the floating widget sits idle / Windows：贴边竖条，以及鼠标停在面板上或从侧栏滑出时的面板，始终使用最高玻璃浓度，亮色桌面不再透出来；透明度设置只作用于闲置时的悬浮窗
 
+### Fixed / 修复
+
+- The macOS installer stopped at once with `arch?: unbound variable` when Terminal used a UTF-8 locale (the default), because the system bash 3.2 read the full-width bracket after `$arch` as part of the variable name; variables next to Chinese text are now braced, and CI rejects new ones / macOS 安装脚本在终端使用 UTF-8 区域设置（默认情况）时会立刻报 `arch?: unbound variable` 退出：系统自带的 bash 3.2 会把 `$arch` 后面的全角括号读进变量名。紧挨中文的变量已改为 `${…}` 写法，CI 也会拦下新的此类写法
+
 ### Planned / 计划
 
 - In-app language switching / 应用内语言切换

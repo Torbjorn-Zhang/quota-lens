@@ -49,6 +49,17 @@ jobs:
         with:
           dotnet-version: 6.0.x
 
+      - name: Check shell scripts for macOS bash 3.2
+        # The system bash 3.2, in a UTF-8 locale, reads non-ASCII bytes right after `$name` as part of
+        # the variable name, so `$arch）` fails under `set -u`; such variables must be written `${name}`.
+        run: |
+          for f in install-mac.sh publish-mac.sh Install-QuotaLens.command; do /bin/bash -n "$f"; done
+          if perl -ne 'print "$ARGV:$.: $_" if /\$[A-Za-z_][A-Za-z0-9_]*[^\x00-\x7F]/; close ARGV if eof' \
+              install-mac.sh publish-mac.sh Install-QuotaLens.command | grep .; then
+            echo "Write the variables above as \${name}." >&2
+            exit 1
+          fi
+
       - name: Build shared core and macOS app
         run: |
           dotnet build src/QuotaLens.Core/QuotaLens.Core.csproj -c Release --warnaserror
