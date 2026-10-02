@@ -74,7 +74,7 @@ The current release is not commercially code-signed, so Windows SmartScreen may 
 
 ### macOS
 
-- The menu bar thumbnail is the counterpart of the Windows sidebar strip: `C` is Codex and `A` is Claude; each ring set shows the 5-hour window outside, 7 days in the middle, and the model allowance inside, in the same colours as on Windows. Beside the rings, two lines give the 5-hour and 7-day remaining percentage and reset countdown (for example `77% 2h01m` and `73% 2d14h`), refreshed every 30 seconds and turning orange or red when low.
+- The menu bar thumbnail is the counterpart of the Windows sidebar strip and sits on its own rounded plate (dark on dark menu bars, near-white on light ones), so it stays legible over any wallpaper behind the transparent menu bar: `C` is Codex and `A` is Claude; each ring set shows the 5-hour window outside, 7 days in the middle, and the model allowance inside, in the same colours as on Windows. Beside the rings, two lines give the 5-hour and 7-day remaining percentage and reset countdown (for example `77% 2h01m` and `73% 2d14h`), refreshed every 30 seconds and turning orange or red when low.
 - Click the icon to drop the ring panel below it: one row per quota window with its remaining percentage and a reset countdown that ticks every second (for example “2时1分后 · 10/1 03:40”), matching the Windows panel. Click elsewhere or the icon again to hide it.
 - `↻` in the panel refreshes now; the bottom row toggles launch at login and low-quota alerts, and offers display-off-while-awake and quit (labels are in Chinese).
 
@@ -82,11 +82,11 @@ The current release is not commercially code-signed, so Windows SmartScreen may 
 
 - Drag the top header to move the widget.
 - Drag it against the left or right screen edge to dock it as a sidebar. It then shows only a slim strip. Codex and Claude each get a set of concentric rings: outer 5-hour, middle 7-day, inner model allowance, with the arc showing the remaining share. Below the rings, one row per window in the same order and colour lists the remaining percentage and the reset time (clock time such as `14:30` within 24 hours, otherwise a date such as `10/3`). Rest the cursor on the strip to slide out the full panel, which tucks back once the cursor leaves. Drag it away from the edge to float it again, or toggle “Edge sidebar” (贴边侧栏) from the tray menu. The docked strip always stays on top.
-- Colours identify the quota type and match between the panel and the sidebar: blue for the 5-hour window, violet for 7 days, green for model allowances such as Fable. A ring or bar turns red at 20% or less remaining; percentages turn orange at 40% and red at 20%.
+- Colours identify the quota type and match between the panel and the sidebar: sky blue for the 5-hour window, orchid for 7 days, mint for model allowances such as Fable; the three stay distinct for red-green colour-blind readers too. A ring or bar turns red at 20% or less remaining; percentages turn orange at 40% and red at 20%.
 - Select `↻` to refresh and `◇` to toggle always-on-top (floating mode only).
 - Select the moon button to turn off the displays while keeping the computer awake.
 - `×` hides the window to the tray; choose “Exit” from the tray menu to stop the app.
-- Hovering over the widget temporarily increases its opacity.
+- Hovering over the widget makes the panel opaque for reading and restores the chosen transparency afterwards; the docked strip is always opaque, so a bright desktop never shows through.
 
 ## Privacy and security
 

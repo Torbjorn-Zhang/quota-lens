@@ -28,13 +28,37 @@ internal static class QuotaWindowLegend
     internal const string CriticalHex = "#FF6B7A";
     internal const string WarningHex = "#FFB454";
 
-    /// <summary>Blue 5-hour, violet 7-day, green model allowance, grey-blue for anything else.</summary>
+    // Identity colours for dark surfaces. Every pair stays at least OKLab ΔE 19 apart for full-colour
+    // vision and 9.5 under simulated protanopia and deuteranopia, none resembles the warning orange
+    // or critical red, and each keeps 4.5:1 against the dark glass even with a white desktop or
+    // wallpaper showing through at the densities the apps use.
+    internal const string SessionHex = "#71C9FA";
+    internal const string WeeklyHex = "#BF83FE";
+    internal const string ModelHex = "#3EEE92";
+    internal const string OtherHex = "#9DB2C8";
+
+    /// <summary>Sky blue 5-hour, orchid 7-day, mint model allowance, grey-blue for anything else.</summary>
     internal static string IdentityHex(QuotaWindow window) => Classify(window) switch
     {
-        QuotaWindowKind.Session => "#4CC9F0",
-        QuotaWindowKind.Weekly => "#B18CFF",
-        QuotaWindowKind.Model => "#38D6A3",
-        _ => "#9DB2C8"
+        QuotaWindowKind.Session => SessionHex,
+        QuotaWindowKind.Weekly => WeeklyHex,
+        QuotaWindowKind.Model => ModelHex,
+        _ => OtherHex
+    };
+
+    /// <summary>
+    /// Counterpart of a palette colour for light surfaces (the light macOS menu bar): deep enough for
+    /// 4.5:1 text on white, with the blue and the purple far enough apart in lightness to stay
+    /// distinct for red-green colour-blind readers.
+    /// </summary>
+    internal static string OnLightHex(string hex) => hex.ToUpperInvariant() switch
+    {
+        SessionHex => "#0E2FFD",
+        WeeklyHex => "#A211AC",
+        ModelHex => "#1D8071",
+        WarningHex => "#A85400",
+        CriticalHex => "#C8283E",
+        _ => "#4E5A6E"
     };
 
     /// <summary>Bars and rings keep their identity colour until the window is nearly exhausted.</summary>

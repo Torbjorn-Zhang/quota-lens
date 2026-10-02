@@ -253,6 +253,7 @@ public partial class MainWindow
         var wasHidden = GlassFrame.Visibility != Visibility.Visible;
         StripFrame.Visibility = Visibility.Collapsed;
         GlassFrame.Visibility = Visibility.Visible;
+        ApplyGlassOpacity(ReadingOpacity);
         _sidebarState = SidebarState.Expanded;
         PlaceDockedWindow();
 
