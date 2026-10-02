@@ -90,6 +90,19 @@ internal sealed class MacStatusItem : IDisposable
         }
     }
 
+    /// <summary>
+    /// Whether the menu bar draws this item in a dark appearance, read from the button's effective
+    /// appearance, which follows the menu bar rather than the system setting; null when unreadable.
+    /// </summary>
+    public bool? IsDarkAppearance()
+    {
+        var appearance = Send(_button, Sel("effectiveAppearance"));
+        var name = appearance == IntPtr.Zero ? IntPtr.Zero : Send(appearance, Sel("name"));
+        var utf8 = name == IntPtr.Zero ? IntPtr.Zero : Send(name, Sel("UTF8String"));
+        var text = utf8 == IntPtr.Zero ? null : Marshal.PtrToStringUTF8(utf8);
+        return text?.Contains("Dark", StringComparison.Ordinal);
+    }
+
     public void SetToolTip(string text) =>
         SendPtr(_button, Sel("setToolTip:"), NSString(text));
 

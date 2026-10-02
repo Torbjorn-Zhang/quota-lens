@@ -11,6 +11,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - In-app language switching / 应用内语言切换
 - Signed installer and update channel / 签名安装包与更新通道
 
+## [0.6.3] - 2026-10-02
+
+### Changed / 变更
+
+- macOS: the menu bar thumbnail is restyled after Apple's Activity rings and menu bar, replacing the outlines of 0.6.2. Each ring is drawn in its identity colour over a track of the same colour at low opacity, and each line starts with a dot in that colour, so it stays clear which line is the 5-hour and which the 7-day window. Text is in the menu bar's own label colour (white on dark menu bars, black on light ones) in the system font with equal-width digits, drawn with AppKit, so it reads like the system's own items on any wallpaper. Only a low percentage turns orange (40% or less) or red (20% or less), and a ring at 20% or less turns red, in Apple's increased-contrast system colours; the menu bar's actual appearance is read from the status item, and the thumbnail is only as wide as its text (about 185 instead of 218 points), leaving room for other items beside the notch / macOS：菜单栏缩略图改为参照苹果活动圆环和系统菜单栏的风格，取代 0.6.2 的描边：每个圆环用各自的身份色，底轨为同色淡色，每行文字前有同色小圆点，一眼就能分清哪行是 5 小时、哪行是 7 天；文字使用菜单栏自身的标签颜色（深色菜单栏为白色、浅色为黑色），以系统字体（等宽数字）通过 AppKit 绘制，在任何壁纸上都和系统图标一样清晰；只有额度偏低时数字才变为系统橙（40% 及以下）或系统红（20% 及以下），圆环在 20% 及以下变红；深浅色按状态栏项的实际外观判断；缩略图宽度按实际文字计算（约 185pt，原来 218pt），给刘海旁的其他菜单栏图标留出位置
+
 ## [0.6.2] - 2026-10-02
 
 ### Changed / 变更
@@ -122,7 +128,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - Initial Codex and Claude Code quota monitoring / 初始 Codex 与 Claude Code 额度监控
 
-[Unreleased]: https://github.com/Torbjorn-Zhang/quota-lens/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/Torbjorn-Zhang/quota-lens/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.6.3
 [0.6.2]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.6.2
 [0.6.1]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.6.1
 [0.6.0]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.6.0

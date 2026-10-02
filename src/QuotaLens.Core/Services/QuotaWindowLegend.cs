@@ -46,21 +46,6 @@ internal static class QuotaWindowLegend
         _ => OtherHex
     };
 
-    /// <summary>
-    /// Counterpart of a palette colour for light surfaces (the light macOS menu bar): deep enough for
-    /// 4.5:1 text on white, with the blue and the purple far enough apart in lightness to stay
-    /// distinct for red-green colour-blind readers.
-    /// </summary>
-    internal static string OnLightHex(string hex) => hex.ToUpperInvariant() switch
-    {
-        SessionHex => "#0E2FFD",
-        WeeklyHex => "#A211AC",
-        ModelHex => "#1D8071",
-        WarningHex => "#A85400",
-        CriticalHex => "#C8283E",
-        _ => "#4E5A6E"
-    };
-
     /// <summary>Bars and rings keep their identity colour until the window is nearly exhausted.</summary>
     internal static string BarHex(QuotaWindow window) =>
         window.RemainingPercent <= 20 ? CriticalHex : IdentityHex(window);

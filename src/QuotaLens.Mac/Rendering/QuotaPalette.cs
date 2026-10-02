@@ -24,11 +24,7 @@ internal static class QuotaPalette
 
     internal static IImmutableSolidColorBrush Identity(QuotaWindow window) => Hex(QuotaWindowLegend.IdentityHex(window));
 
-    internal static IImmutableSolidColorBrush Bar(QuotaWindow window, bool onLight = false) =>
-        Hex(Shade(QuotaWindowLegend.BarHex(window), onLight));
-
-    /// <summary>The palette colour itself on dark surfaces, its deeper counterpart on light ones.</summary>
-    internal static string Shade(string hex, bool onLight) => onLight ? QuotaWindowLegend.OnLightHex(hex) : hex;
+    internal static IImmutableSolidColorBrush Bar(QuotaWindow window) => Hex(QuotaWindowLegend.BarHex(window));
 
     internal static IImmutableSolidColorBrush Level(double remaining, IImmutableSolidColorBrush normal) =>
         QuotaWindowLegend.LevelHex(remaining) is string hex ? Hex(hex) : normal;

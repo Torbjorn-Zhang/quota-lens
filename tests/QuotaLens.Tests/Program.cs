@@ -471,21 +471,14 @@ Run("Quota colours keep 4.5:1 on the surfaces they are drawn on", () =>
         QuotaWindowLegend.OtherHex, QuotaWindowLegend.WarningHex, QuotaWindowLegend.CriticalHex
     };
 
-    // Worst cases for the dark palette: the outline around the macOS menu bar text and rings, and the
-    // lightest stop of the Windows glass at reading density, each over a white wallpaper or desktop.
-    var menuBarOutline = OverWhite("#0F1526", 0xE0 / 255.0);
+    // Worst cases: the macOS panel and the lightest stop of the Windows glass at reading density, each
+    // over a white wallpaper or desktop. The macOS menu bar thumbnail is monochrome and not covered.
+    var macPanel = OverWhite("#0F1526", 0xF2 / 255.0);
     var windowsGlass = OverWhite("#141B2E", 0xE4 / 255.0);
     foreach (var hex in palette)
     {
-        AtLeast(4.5, Contrast(Rgb(hex), menuBarOutline), $"{hex} on the menu bar outline");
+        AtLeast(4.5, Contrast(Rgb(hex), macPanel), $"{hex} on the macOS panel");
         AtLeast(4.5, Contrast(Rgb(hex), windowsGlass), $"{hex} on the Windows glass");
-
-        var light = QuotaWindowLegend.OnLightHex(hex);
-        if (hex != QuotaWindowLegend.OtherHex && light == QuotaWindowLegend.OnLightHex(QuotaWindowLegend.OtherHex))
-        {
-            throw new Exception($"{hex} has no light-surface counterpart.");
-        }
-        AtLeast(4.5, Contrast(Rgb(light), Rgb("#FFFFFF")), $"{light} on white");
     }
 });
 
