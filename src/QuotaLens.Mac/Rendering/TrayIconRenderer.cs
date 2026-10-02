@@ -15,11 +15,18 @@ namespace QuotaLens.Mac.Rendering;
 /// <remarks>
 /// Each text block reserves the width of its widest possible value, so the menu bar item keeps a
 /// constant width as the countdown ticks and never nudges the neighbouring icons. The image is
-/// coloured, not a template, so letters, tracks and text switch shades for light and dark bars.
+/// coloured, not a template, so it sits on its own rounded plate: since macOS 26 the menu bar is
+/// transparent and a bright or busy wallpaper would otherwise wash the colours out. The plate is the
+/// panel's dark glass on dark bars and near-white on light bars, where rings and text switch to the
+/// palette's deeper light-surface shades; either way they keep 4.5:1 over any wallpaper.
 /// </remarks>
 internal static class TrayIconRenderer
 {
     private const double Height = 22;
+    private const double PlatePadding = 3;
+    private const double PlateRadius = 5;
+    private const string DarkPlate = "#E00F1526";
+    private const string LightPlate = "#F0FFFFFF";
     private const double RingDiameter = 17;
     private const double RingStroke = 1.9;
     private const double RingGap = 0.6;
@@ -37,7 +44,7 @@ internal static class TrayIconRenderer
         new("Helvetica Neue, Segoe UI, Arial", FontStyle.Normal, FontWeight.SemiBold);
 
     /// <summary>Display size of the thumbnail in points; the PNG is rendered at twice this.</summary>
-    internal static double PointWidth => Math.Ceiling(2 * GroupWidth + GroupGap);
+    internal static double PointWidth => Math.Ceiling(2 * GroupWidth + GroupGap + 2 * PlatePadding);
     internal static double PointHeight => Height;
 
     private static double TextBlockWidth => Math.Ceiling(Measure(WidestLine, TextFace, TextSize, Brushes.White).Width) + 1;
@@ -53,8 +60,14 @@ internal static class TrayIconRenderer
         using (context.PushRenderOptions(new RenderOptions { TextRenderingMode = TextRenderingMode.Antialias }))
         {
             // Greyscale text smoothing: sub-pixel colour fringes look wrong once macOS composites the icon.
-            DrawGroup(context, 0, "C", snapshot?.Codex, darkMenuBar, now);
-            DrawGroup(context, GroupWidth + GroupGap, "A", snapshot?.Claude, darkMenuBar, now);
+            context.DrawRectangle(
+                QuotaPalette.Hex(darkMenuBar ? DarkPlate : LightPlate),
+                null,
+                new Rect(0, 0, PointWidth, PointHeight),
+                PlateRadius,
+                PlateRadius);
+            DrawGroup(context, PlatePadding, "C", snapshot?.Codex, darkMenuBar, now);
+            DrawGroup(context, PlatePadding + GroupWidth + GroupGap, "A", snapshot?.Claude, darkMenuBar, now);
         }
 
         using var stream = new MemoryStream();
@@ -71,7 +84,7 @@ internal static class TrayIconRenderer
         DateTimeOffset now)
     {
         var available = quota?.IsAvailable == true;
-        var muted = QuotaPalette.Hex(dark ? "#8A94A6" : "#7A8292");
+        var muted = QuotaPalette.Hex(dark ? "#9DB2C8" : "#5F6878");
 
         var letterText = Measure(letter, LetterFace, 11, available ? QuotaPalette.Hex(dark ? "#EAF0FF" : "#1C2230") : muted);
         context.DrawText(letterText, new Point(x + (LetterWidth - letterText.Width) / 2, (Height - letterText.Height) / 2));
