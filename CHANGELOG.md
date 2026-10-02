@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Fixed / 修复
+
+- The macOS installer stopped at once with `arch?: unbound variable` when Terminal used a UTF-8 locale (the default), because the system bash 3.2 read the full-width bracket after `$arch` as part of the variable name; variables next to Chinese text are now braced, and CI rejects new ones / macOS 安装脚本在终端使用 UTF-8 区域设置（默认情况）时会立刻报 `arch?: unbound variable` 退出：系统自带的 bash 3.2 会把 `$arch` 后面的全角括号读进变量名。紧挨中文的变量已改为 `${…}` 写法，CI 也会拦下新的此类写法
+
 ### Planned / 计划
 
 - In-app language switching / 应用内语言切换

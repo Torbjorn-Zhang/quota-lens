@@ -70,7 +70,7 @@ fi
 app_source=""
 
 install_from_release() {
-    say "查找最新发布版中的 macOS（$arch）安装包…"
+    say "查找最新发布版中的 macOS（${arch}）安装包…"
     local json url sums_url file expected actual
     json="$(curl -fsSL -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/$repo/releases/latest")" || return 1
     url="$(printf '%s' "$json" | grep -o '"browser_download_url": *"[^"]*"' | sed 's/.*"\(https[^"]*\)"$/\1/' \
@@ -113,7 +113,7 @@ build_from_source() {
         source_dir="$script_dir"
         say "从当前仓库构建：$source_dir"
     else
-        say "下载源码（$ref）…"
+        say "下载源码（${ref}）…"
         curl -fsSL "https://codeload.github.com/$repo/tar.gz/$ref" -o "$work/source.tgz" \
             || die "下载源码失败：分支或标签 $ref 不存在？"
         mkdir -p "$work/source"
@@ -131,9 +131,9 @@ build_from_source() {
     export DOTNET_CLI_HOME="${DOTNET_CLI_HOME:-$build_cache/cli-home}"
     export XDG_DATA_HOME="$build_cache/data"
     if [[ "$keep_cache" == 1 ]]; then
-        say "构建 QuotaLens.app（$rid），构建缓存保留在 $build_cache"
+        say "构建 QuotaLens.app（${rid}），构建缓存保留在 $build_cache"
     else
-        say "构建 QuotaLens.app（$rid），约需下载 800 MB 构建包，结束后自动删除"
+        say "构建 QuotaLens.app（${rid}），约需下载 800 MB 构建包，结束后自动删除"
     fi
     (cd "$source_dir" && bash ./publish-mac.sh "$rid")
     app_source="$source_dir/artifacts/mac/$rid/QuotaLens.app"
