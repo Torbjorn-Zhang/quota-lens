@@ -559,7 +559,7 @@ public partial class MainWindow : Window
     }
 
     private void Window_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e) =>
-        ApplyGlassOpacity(Math.Min(0.96, _settings.WidgetOpacity + 0.10));
+        ApplyGlassOpacity(ReadingOpacity);
 
     private void Window_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e) =>
         ApplyGlassOpacity(_settings.WidgetOpacity);
@@ -625,11 +625,18 @@ public partial class MainWindow : Window
         _settingsService.Save(_settings);
     }
 
+    /// <summary>
+    /// Glass density while the panel is being read (under the cursor, or slid out of the sidebar) and
+    /// for the sidebar strip at all times. The glass gradient's own stops are 89-95% opaque, which
+    /// keeps the quota colours and text at 4.5:1 or more even over a white desktop; the chosen widget
+    /// opacity only applies while the floating panel sits idle.
+    /// </summary>
+    private const double ReadingOpacity = 1.0;
+
     private void ApplyGlassOpacity(double opacity)
     {
         if (GlassFrame.Background is System.Windows.Media.Brush brush) brush.Opacity = opacity;
-        // The strip sits over arbitrary content at the screen edge, so keep it a little denser.
-        if (StripFrame.Background is System.Windows.Media.Brush strip) strip.Opacity = Math.Min(0.96, opacity + 0.12);
+        if (StripFrame.Background is System.Windows.Media.Brush strip) strip.Opacity = ReadingOpacity;
     }
 
     private void UpdateOpacityMenu()
