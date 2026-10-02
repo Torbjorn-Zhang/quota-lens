@@ -56,7 +56,7 @@ API key、Bedrock、Vertex 等按量计费账号通常没有相同的订阅额�
 curl -fsSL https://raw.githubusercontent.com/Torbjorn-Zhang/quota-lens/main/install-mac.sh | bash
 ```
 
-脚本自动识别 Apple Silicon 或 Intel，从最新发布版下载 macOS 安装包并校验 SHA-256，装进“应用程序”后直接启动；已有旧版本时会先退出再替换。若最新发布版还没有 macOS 包（或加 `--source`），会改为在本机从源码构建：只需联网，不需要 Git、Xcode 或管理员权限，.NET 6 SDK 只装在 `~/Library/Caches/QuotaLens`。已经克隆仓库时，也可以在 Finder 中双击 `Install-QuotaLens.command`。`--help` 查看全部选项。
+脚本自动识别 Apple Silicon 或 Intel，从最新发布版下载 macOS 安装包并校验 SHA-256，装进“应用程序”后直接启动；已有旧版本时会先退出再替换。若最新发布版还没有 macOS 包（或加 `--source`），会改为在本机从源码构建：不需要 Git、Xcode 或管理员权限，但要下载约 1.3 GB（.NET 6 SDK 与构建包），全部放在临时目录、装完自动删除，不会留在 `~/.dotnet` 或 `~/.nuget`；加 `--keep-build-cache` 可保留到 `~/Library/Caches/QuotaLens` 以便下次更快。已经克隆仓库时，也可以在 Finder 中双击 `Install-QuotaLens.command`。`--help` 查看全部选项。
 
 手动安装：
 

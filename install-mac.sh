@@ -4,17 +4,19 @@
 #   curl -fsSL https://raw.githubusercontent.com/Torbjorn-Zhang/quota-lens/main/install-mac.sh | bash
 #
 # Installs QuotaLens.app into /Applications (or ~/Applications) and starts it. By default it
-# downloads the prebuilt app from the latest GitHub release and checks its SHA-256; when that
-# release has no macOS build, or with --source, it builds from source instead. Building needs no
-# Git, Xcode or admin rights: the source comes as a tarball and the .NET 6 SDK is installed into
-# ~/Library/Caches/QuotaLens. Run from a repository checkout, it builds that checkout.
+# downloads the prebuilt app (about 40 MB) from the latest GitHub release and checks its SHA-256;
+# when that release has no macOS build, or with --source, it builds from source instead. Building
+# needs no Git, Xcode or admin rights but downloads about 1.3 GB (the .NET 6 SDK and the build's
+# packages) into a temporary folder that is deleted afterwards. Run from a repository checkout, it
+# builds that checkout.
 #
 # Options:
-#   --release        only install a prebuilt release (fail if none has a macOS build)
-#   --source         always build from source
-#   --ref <name>     branch or tag to build when building from source (default: main)
-#   --no-launch      install without starting the app
-#   -h, --help       show this help
+#   --release            only install a prebuilt release (fail if none has a macOS build)
+#   --source             always build from source
+#   --ref <name>         branch or tag to build when building from source (default: main)
+#   --keep-build-cache   keep the SDK and packages in ~/Library/Caches/QuotaLens for faster rebuilds
+#   --no-launch          install without starting the app
+#   -h, --help           show this help
 
 # Everything runs inside main(), so `curl … | bash` parses the whole script before executing any
 # of it, and main's stdin is detached so no build step can swallow the rest of a piped script.
@@ -25,6 +27,7 @@ repo="Torbjorn-Zhang/quota-lens"
 mode="auto"
 ref="main"
 launch=1
+keep_cache=0
 
 say() { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m错误：\033[0m%s\n' "$*" >&2; exit 1; }
@@ -35,7 +38,8 @@ while [[ $# -gt 0 ]]; do
         --source) mode="source" ;;
         --ref) ref="${2:?--ref 需要分支或标签名}"; shift ;;
         --no-launch) launch=0 ;;
-        -h|--help) sed -n '2,21p' "${BASH_SOURCE[0]:-$0}" 2>/dev/null | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --keep-build-cache) keep_cache=1 ;;
+        -h|--help) sed -n '2,20p' "${BASH_SOURCE[0]:-$0}" 2>/dev/null | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) die "未知参数：$1（--help 查看用法）" ;;
     esac
     shift
@@ -50,7 +54,11 @@ esac
 
 work="$(mktemp -d "${TMPDIR:-/tmp}/quotalens-install.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
-cache="$HOME/Library/Caches/QuotaLens"
+
+# A source build pulls about 1.3 GB (SDK ~500 MB, packages ~800 MB). It lives in the temporary
+# folder and disappears with it, unless --keep-build-cache asks to keep it for faster rebuilds.
+build_cache="$work/build-cache"
+[[ "$keep_cache" == 1 ]] && build_cache="$HOME/Library/Caches/QuotaLens"
 
 # A checkout is detected only when the script runs from a file next to publish-mac.sh.
 script_dir=""
@@ -89,9 +97,9 @@ ensure_dotnet() {
     if command -v dotnet >/dev/null 2>&1 && dotnet --list-sdks 2>/dev/null | grep -q '^6\.'; then
         return
     fi
-    local dir="${QUOTALENS_DOTNET_DIR:-$cache/dotnet}"
+    local dir="${QUOTALENS_DOTNET_DIR:-$build_cache/dotnet}"
     if [[ ! -x "$dir/dotnet" ]] || ! "$dir/dotnet" --list-sdks 2>/dev/null | grep -q '^6\.'; then
-        say "安装 .NET 6 SDK 到 $dir（只在本用户目录，约 200 MB，首次需要几分钟）"
+        say "下载 .NET 6 SDK（约 500 MB，只用于这次构建）"
         curl -fsSL https://dot.net/v1/dotnet-install.sh -o "$work/dotnet-install.sh"
         bash "$work/dotnet-install.sh" --channel 6.0 --install-dir "$dir" --no-path >/dev/null
     fi
@@ -116,8 +124,15 @@ build_from_source() {
 
     ensure_dotnet
     export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
-    export NUGET_PACKAGES="${NUGET_PACKAGES:-$cache/nuget}"
-    say "构建 QuotaLens.app（$rid）…"
+    # Keep every .NET/NuGet cache inside build_cache, so nothing is left in ~/.nuget or ~/.dotnet.
+    export NUGET_PACKAGES="${NUGET_PACKAGES:-$build_cache/nuget}"
+    export NUGET_HTTP_CACHE_PATH="${NUGET_HTTP_CACHE_PATH:-$build_cache/nuget-http}"
+    export DOTNET_CLI_HOME="${DOTNET_CLI_HOME:-$build_cache/cli-home}"
+    if [[ "$keep_cache" == 1 ]]; then
+        say "构建 QuotaLens.app（$rid），构建缓存保留在 $build_cache"
+    else
+        say "构建 QuotaLens.app（$rid），约需下载 800 MB 构建包，结束后自动删除"
+    fi
     (cd "$source_dir" && bash ./publish-mac.sh "$rid")
     app_source="$source_dir/artifacts/mac/$rid/QuotaLens.app"
     [[ -d "$app_source" ]] || die "构建没有产出 QuotaLens.app。"
