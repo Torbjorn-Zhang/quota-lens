@@ -50,6 +50,16 @@ API key、Bedrock、Vertex 等按量计费账号通常没有相同的订阅额�
 
 ### macOS
 
+**一键安装**：打开“终端”，粘贴运行：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Torbjorn-Zhang/quota-lens/main/install-mac.sh | bash
+```
+
+脚本自动识别 Apple Silicon 或 Intel，从最新发布版下载 macOS 安装包并校验 SHA-256，装进“应用程序”后直接启动；已有旧版本时会先退出再替换。若最新发布版还没有 macOS 包（或加 `--source`），会改为在本机从源码构建：只需联网，不需要 Git、Xcode 或管理员权限，.NET 6 SDK 只装在 `~/Library/Caches/QuotaLens`。已经克隆仓库时，也可以在 Finder 中双击 `Install-QuotaLens.command`。`--help` 查看全部选项。
+
+手动安装：
+
 1. 从 Releases 下载 `QuotaLens-*-macos-arm64.zip`（Apple Silicon）或 `QuotaLens-*-macos-x64.zip`（Intel），解压后把 `QuotaLens.app` 拖进“应用程序”。
 2. 应用只做了临时签名、没有经过 Apple 公证，首次打开会被拦截。可在“系统设置 → 隐私与安全性”中点“仍要打开”，或在终端执行：
 

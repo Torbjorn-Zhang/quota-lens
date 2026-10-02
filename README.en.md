@@ -48,6 +48,16 @@ API-key, Bedrock, Vertex, and other metered accounts generally do not expose the
 
 ### macOS
 
+**One-step install**: open Terminal and run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Torbjorn-Zhang/quota-lens/main/install-mac.sh | bash
+```
+
+The script picks Apple Silicon or Intel, downloads the macOS build from the latest release, checks its SHA-256, installs it into Applications and starts it, quitting and replacing any older copy first. If the latest release has no macOS build yet (or with `--source`), it builds on the Mac instead: it needs only network access, no Git, Xcode, or admin rights, and keeps the .NET 6 SDK in `~/Library/Caches/QuotaLens`. From a cloned repository you can also double-click `Install-QuotaLens.command` in Finder. Run with `--help` for all options.
+
+Manual install:
+
 1. Download `QuotaLens-*-macos-arm64.zip` (Apple Silicon) or `QuotaLens-*-macos-x64.zip` (Intel) from Releases, unzip it, and drag `QuotaLens.app` into Applications.
 2. The app is ad-hoc signed but not notarised by Apple, so macOS blocks the first launch. Choose “Open Anyway” in System Settings → Privacy & Security, or run:
 
