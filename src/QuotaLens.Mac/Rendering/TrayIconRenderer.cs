@@ -4,6 +4,9 @@ using QuotaLens.Services;
 
 namespace QuotaLens.Mac.Rendering;
 
+/// <summary>The menu bar image and its width in points (its height is <see cref="TrayIconRenderer.PointHeight"/>).</summary>
+internal readonly record struct MenuBarImage(byte[] Png, double Width);
+
 /// <summary>
 /// Draws the menu bar thumbnail, the macOS counterpart of the Windows sidebar strip. Per service:
 /// its letter, its concentric rings, and two compact lines, the 5-hour window then the 7-day window,
@@ -18,8 +21,9 @@ namespace QuotaLens.Mac.Rendering;
 /// bar clock, which keeps it as readable as the system's own items on any wallpaper; only a low
 /// percentage turns Apple's increased-contrast orange (40% or less) or red (20% or less), and a ring
 /// at 20% or less turns red. Light menu bars get deeper shades of the identity colours. On macOS it is
-/// drawn with AppKit for the real system font; elsewhere (previews) with Avalonia. Each text block
-/// reserves the width of its widest possible value, so the item keeps a constant width.
+/// drawn with AppKit for the real system font; elsewhere (previews) with Avalonia. The image is only
+/// as wide as its text needs, so it leaves room for other menu bar items beside the notch; it grows or
+/// shrinks a little when a countdown gains or loses a digit.
 /// </remarks>
 internal static class TrayIconRenderer
 {
@@ -36,73 +40,90 @@ internal static class TrayIconRenderer
     private const double LetterSize = 11;
     private const double TextSize = 9;
     private const double Scale = 2;
-    private const string WidestLine = "100% 23h59m";
+    private const string OfflineText = "未连接";
 
-    private static readonly Lazy<(double TextWidth, string Font)> Metrics = new(() =>
+    private static readonly Lazy<string> Font = new(() =>
     {
         using var canvas = CreateCanvas(1, 1);
-        return (Math.Ceiling(canvas.Measure(WidestLine, TextSize, ThumbnailFont.Text).Width) + 1, canvas.FontDescription);
+        return canvas.FontDescription;
     });
 
-    /// <summary>Display size of the thumbnail in points; the PNG is rendered at twice this.</summary>
-    internal static double PointWidth => Math.Ceiling(2 * GroupWidth + GroupGap);
     internal static double PointHeight => Height;
 
     /// <summary>Font the numbers are drawn in, for the self-test log.</summary>
-    internal static string FontDescription => Metrics.Value.Font;
+    internal static string FontDescription => Font.Value;
 
-    private static double GroupWidth =>
-        LetterWidth + LetterToRing + RingDiameter + RingToText + DotDiameter + DotToText + Metrics.Value.TextWidth;
-
-    internal static byte[] RenderPng(QuotaSnapshot? snapshot, bool darkMenuBar, DateTimeOffset now)
+    internal static MenuBarImage Render(QuotaSnapshot? snapshot, bool darkMenuBar, DateTimeOffset now)
     {
+        Group codex, claude;
+        using (var measure = CreateCanvas(1, 1))
+        {
+            codex = Layout(measure, "C", snapshot?.Codex, now);
+            claude = Layout(measure, "A", snapshot?.Claude, now);
+        }
+
+        var width = Math.Ceiling(codex.Width + GroupGap + claude.Width);
         var inks = new Inks(darkMenuBar);
-        using var canvas = CreateCanvas(PointWidth, PointHeight);
-        DrawGroup(canvas, 0, "C", snapshot?.Codex, inks, now);
-        DrawGroup(canvas, GroupWidth + GroupGap, "A", snapshot?.Claude, inks, now);
-        return canvas.EncodePng();
+        using var canvas = CreateCanvas(width, Height);
+        DrawGroup(canvas, 0, codex, inks);
+        DrawGroup(canvas, codex.Width + GroupGap, claude, inks);
+        return new MenuBarImage(canvas.EncodePng(), width);
     }
 
     private static IThumbnailCanvas CreateCanvas(double width, double height) => OperatingSystem.IsMacOS()
         ? new AppKitThumbnailCanvas(width, height, Scale)
         : new AvaloniaThumbnailCanvas(width, height, Scale);
 
-    private static void DrawGroup(
-        IThumbnailCanvas canvas,
-        double x,
-        string letter,
-        ProviderQuota? quota,
-        Inks inks,
-        DateTimeOffset now)
+    /// <summary>What one service shows, and how wide its text block is.</summary>
+    private sealed record Group(string Letter, ProviderQuota? Quota, IReadOnlyList<(QuotaWindow Window, string Text)> Lines, double TextWidth)
     {
-        var available = quota?.IsAvailable == true;
+        public bool Available => Quota?.IsAvailable == true;
 
-        var letterSize = canvas.Measure(letter, LetterSize, ThumbnailFont.Letter);
-        canvas.DrawText(letter, x + (LetterWidth - letterSize.Width) / 2, (Height - letterSize.Height) / 2,
-            LetterSize, ThumbnailFont.Letter, available ? inks.Label : inks.Muted);
+        public double Width => LetterWidth + LetterToRing + RingDiameter + RingToText + TextWidth;
+    }
+
+    private static Group Layout(IThumbnailCanvas measure, string letter, ProviderQuota? quota, DateTimeOffset now)
+    {
+        if (quota?.IsAvailable != true)
+        {
+            return new Group(letter, quota, Array.Empty<(QuotaWindow, string)>(),
+                Math.Ceiling(measure.Measure(OfflineText, TextSize, ThumbnailFont.Text).Width));
+        }
+
+        var windows = quota.StandardWindows.Take(2).ToList();
+        if (windows.Count == 0) windows = quota.Windows.Take(2).ToList();
+        var lines = windows
+            .Select(window => (window, $"{window.RemainingPercent:0}% {QuotaWindowLegend.CompactCountdown(window.ResetsAt, now)}"))
+            .ToList();
+        var widest = lines.Count == 0 ? 0 : lines.Max(line => measure.Measure(line.Item2, TextSize, ThumbnailFont.Text).Width);
+        return new Group(letter, quota, lines, DotDiameter + DotToText + Math.Ceiling(widest));
+    }
+
+    private static void DrawGroup(IThumbnailCanvas canvas, double x, Group group, Inks inks)
+    {
+        var letterSize = canvas.Measure(group.Letter, LetterSize, ThumbnailFont.Letter);
+        canvas.DrawText(group.Letter, x + (LetterWidth - letterSize.Width) / 2, (Height - letterSize.Height) / 2,
+            LetterSize, ThumbnailFont.Letter, group.Available ? inks.Label : inks.Muted);
 
         var ringLeft = x + LetterWidth + LetterToRing;
         DrawRings(canvas, new Point(ringLeft + RingDiameter / 2, Height / 2),
-            available ? quota!.Windows.Take(RingPainter.MaxRings).ToList() : Array.Empty<QuotaWindow>(), inks);
+            group.Available ? group.Quota!.Windows.Take(RingPainter.MaxRings).ToList() : Array.Empty<QuotaWindow>(), inks);
 
         var dotLeft = ringLeft + RingDiameter + RingToText;
-        var textLeft = dotLeft + DotDiameter + DotToText;
-        if (!available)
+        if (!group.Available)
         {
-            var offline = canvas.Measure("未连接", TextSize, ThumbnailFont.Text);
-            canvas.DrawText("未连接", dotLeft, (Height - offline.Height) / 2, TextSize, ThumbnailFont.Text, inks.Muted);
+            var offline = canvas.Measure(OfflineText, TextSize, ThumbnailFont.Text);
+            canvas.DrawText(OfflineText, dotLeft, (Height - offline.Height) / 2, TextSize, ThumbnailFont.Text, inks.Muted);
             return;
         }
 
-        var lines = quota!.StandardWindows.Take(2).ToList();
-        if (lines.Count == 0) lines = quota.Windows.Take(2).ToList();
+        var textLeft = dotLeft + DotDiameter + DotToText;
         var lineHeight = Height / 2;
-        for (var index = 0; index < lines.Count; index++)
+        for (var index = 0; index < group.Lines.Count; index++)
         {
-            var window = lines[index];
-            var text = $"{window.RemainingPercent:0}% {QuotaWindowLegend.CompactCountdown(window.ResetsAt, now)}";
+            var (window, text) = group.Lines[index];
             var size = canvas.Measure(text, TextSize, ThumbnailFont.Text);
-            var middle = lines.Count == 1 ? Height / 2 : (index + 0.5) * lineHeight;
+            var middle = group.Lines.Count == 1 ? Height / 2 : (index + 0.5) * lineHeight;
             canvas.FillCircle(new Point(dotLeft + DotDiameter / 2, middle), DotDiameter / 2, inks.Identity(window));
             canvas.DrawText(text, textLeft, middle - size.Height / 2, TextSize, ThumbnailFont.Text,
                 inks.Level(window.RemainingPercent));

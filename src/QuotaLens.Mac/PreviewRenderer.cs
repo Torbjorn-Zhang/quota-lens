@@ -18,14 +18,14 @@ internal static class PreviewRenderer
         var snapshot = SampleSnapshot();
 
         var now = snapshot.FetchedAt;
-        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-dark.png"), TrayIconRenderer.RenderPng(snapshot, darkMenuBar: true, now));
-        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-light.png"), TrayIconRenderer.RenderPng(snapshot, darkMenuBar: false, now));
+        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-dark.png"), TrayIconRenderer.Render(snapshot, darkMenuBar: true, now).Png);
+        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-light.png"), TrayIconRenderer.Render(snapshot, darkMenuBar: false, now).Png);
         // The same data without a low window, to show the thumbnail without alert colours.
         var calm = snapshot with { Claude = snapshot.Claude with { Windows = snapshot.Claude.Windows.Select(window => window with { UsedPercent = Math.Min(window.UsedPercent, 45) }).ToList() } };
-        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-calm-dark.png"), TrayIconRenderer.RenderPng(calm, darkMenuBar: true, now));
-        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-calm-light.png"), TrayIconRenderer.RenderPng(calm, darkMenuBar: false, now));
+        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-calm-dark.png"), TrayIconRenderer.Render(calm, darkMenuBar: true, now).Png);
+        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-calm-light.png"), TrayIconRenderer.Render(calm, darkMenuBar: false, now).Png);
         var codexOffline = snapshot with { Codex = ProviderQuota.Failed("Codex", "Codex 登录已过期，请在客户端中重新登录。") };
-        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-offline.png"), TrayIconRenderer.RenderPng(codexOffline, darkMenuBar: true, now));
+        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-offline.png"), TrayIconRenderer.Render(codexOffline, darkMenuBar: true, now).Png);
 
         File.WriteAllBytes(Path.Combine(directory, "app-icon.png"), AppIconRenderer.RenderPng());
 

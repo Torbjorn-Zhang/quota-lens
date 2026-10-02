@@ -128,10 +128,8 @@ internal sealed class QuotaController : IDisposable
     private void UpdateStatusItem()
     {
         if (_statusItem is null || !OperatingSystem.IsMacOS()) return;
-        _statusItem.SetImage(
-            TrayIconRenderer.RenderPng(_snapshot, IsDarkMenuBar(), DateTimeOffset.Now),
-            TrayIconRenderer.PointWidth,
-            TrayIconRenderer.PointHeight);
+        var image = TrayIconRenderer.Render(_snapshot, IsDarkMenuBar(), DateTimeOffset.Now);
+        _statusItem.SetImage(image.Png, image.Width, TrayIconRenderer.PointHeight);
         _statusItem.SetToolTip(_snapshot is null
             ? "Quota Lens · 正在获取额度"
             : $"Quota Lens · Codex {PrimaryRemaining(_snapshot.Codex)} · Claude {PrimaryRemaining(_snapshot.Claude)}");
@@ -238,7 +236,7 @@ internal sealed class QuotaController : IDisposable
         var frame = _statusItem.ScreenFrame;
         StartupLog.Write(
             $"self-test: status item {frame.Size.Width:0.#}x{frame.Size.Height:0.#} pt at x={frame.Origin.X:0.#}; " +
-            $"icon {TrayIconRenderer.PointWidth:0.#}x{TrayIconRenderer.PointHeight:0.#} pt");
+            $"icon {TrayIconRenderer.Render(_snapshot, IsDarkMenuBar(), DateTimeOffset.Now).Width:0.#}x{TrayIconRenderer.PointHeight:0.#} pt");
 
         // Wait for real data so the panel is checked the way the user sees it.
         for (var waited = 0; _snapshot is null && waited < 90; waited++)
@@ -256,7 +254,7 @@ internal sealed class QuotaController : IDisposable
         StartupLog.Write($"self-test: countdowns shown: {string.Join(" | ", _panel.Panel.CountdownTexts())}");
         SaveSelfTestSnapshot();
         var thumbnail = Path.Combine(AppPaths.DataDirectory, "self-test-menubar.png");
-        File.WriteAllBytes(thumbnail, TrayIconRenderer.RenderPng(_snapshot, IsDarkMenuBar(), DateTimeOffset.Now));
+        File.WriteAllBytes(thumbnail, TrayIconRenderer.Render(_snapshot, IsDarkMenuBar(), DateTimeOffset.Now).Png);
         StartupLog.Write(
             $"self-test: menu bar thumbnail rendered to {thumbnail} " +
             $"(dark={IsDarkMenuBar()} font={TrayIconRenderer.FontDescription})");
