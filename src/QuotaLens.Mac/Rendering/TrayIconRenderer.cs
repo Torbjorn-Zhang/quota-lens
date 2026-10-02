@@ -1,13 +1,8 @@
-using System.Globalization;
 using Avalonia;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
 using QuotaLens.Services;
 
 namespace QuotaLens.Mac.Rendering;
-
-/// <summary>The menu bar image and whether macOS should treat it as a template.</summary>
-internal readonly record struct MenuBarImage(byte[] Png, bool IsTemplate);
 
 /// <summary>
 /// Draws the menu bar thumbnail, the macOS counterpart of the Windows sidebar strip. Per service:
@@ -16,14 +11,15 @@ internal readonly record struct MenuBarImage(byte[] Png, bool IsTemplate);
 /// stays in the innermost ring; the panel has all details. Rendered at 2× for Retina.
 /// </summary>
 /// <remarks>
-/// It follows Apple's own menu bar items: normally a monochrome template image in the system font,
-/// which macOS tints and treats exactly like the clock or the battery, so it stays legible on any
-/// wallpaper behind the transparent menu bar and in either appearance. Colour only appears as an
-/// alert, the way the battery turns red: a percentage at 40% or less turns orange, at 20% or less
-/// red, and a ring at 20% or less turns red, in Apple's increased-contrast system colours. An image
-/// with colour cannot be a template, so while an alert shows it is drawn in the menu bar's label
-/// colour for the current appearance. Each text block reserves the width of its widest possible
-/// value, so the item keeps a constant width as the countdown ticks.
+/// Styled after Apple's Activity rings and menu bar: each ring is drawn in its window's identity
+/// colour over a track of the same colour at low opacity, and each line starts with a dot in that
+/// colour, so the colours say which line belongs to which ring. Text is in the menu bar's label
+/// colour (white on dark, black on light) in the system font with equal-width digits like the menu
+/// bar clock, which keeps it as readable as the system's own items on any wallpaper; only a low
+/// percentage turns Apple's increased-contrast orange (40% or less) or red (20% or less), and a ring
+/// at 20% or less turns red. Light menu bars get deeper shades of the identity colours. On macOS it is
+/// drawn with AppKit for the real system font; elsewhere (previews) with Avalonia. Each text block
+/// reserves the width of its widest possible value, so the item keeps a constant width.
 /// </remarks>
 internal static class TrayIconRenderer
 {
@@ -34,60 +30,45 @@ internal static class TrayIconRenderer
     private const double LetterWidth = 7.5;
     private const double LetterToRing = 1.5;
     private const double RingToText = 3;
+    private const double DotDiameter = 5;
+    private const double DotToText = 2.5;
     private const double GroupGap = 7;
+    private const double LetterSize = 11;
     private const double TextSize = 9;
     private const double Scale = 2;
     private const string WidestLine = "100% 23h59m";
 
-    private static readonly FontFamily SystemFont = new(".AppleSystemUIFont, Helvetica Neue, Segoe UI, Arial");
-    private static readonly Typeface LetterFace = new(SystemFont, FontStyle.Normal, FontWeight.SemiBold);
-    private static readonly Typeface TextFace = new(SystemFont, FontStyle.Normal, FontWeight.Medium);
+    private static readonly Lazy<(double TextWidth, string Font)> Metrics = new(() =>
+    {
+        using var canvas = CreateCanvas(1, 1);
+        return (Math.Ceiling(canvas.Measure(WidestLine, TextSize, ThumbnailFont.Text).Width) + 1, canvas.FontDescription);
+    });
 
     /// <summary>Display size of the thumbnail in points; the PNG is rendered at twice this.</summary>
     internal static double PointWidth => Math.Ceiling(2 * GroupWidth + GroupGap);
     internal static double PointHeight => Height;
 
-    /// <summary>Family the system font resolved to, for the self-test log.</summary>
-    internal static string ResolvedFontFamily =>
-        FontManager.Current.TryGetGlyphTypeface(TextFace, out var glyphs) ? glyphs.FamilyName : "?";
+    /// <summary>Font the numbers are drawn in, for the self-test log.</summary>
+    internal static string FontDescription => Metrics.Value.Font;
 
-    private static double TextBlockWidth => Math.Ceiling(Measure(WidestLine, TextFace, TextSize, Brushes.White).Width) + 1;
-    private static double GroupWidth => LetterWidth + LetterToRing + RingDiameter + RingToText + TextBlockWidth;
+    private static double GroupWidth =>
+        LetterWidth + LetterToRing + RingDiameter + RingToText + DotDiameter + DotToText + Metrics.Value.TextWidth;
 
-    /// <summary>The status item image: a template, unless a shown window needs an alert colour.</summary>
-    internal static MenuBarImage Render(QuotaSnapshot? snapshot, bool darkMenuBar, DateTimeOffset now)
+    internal static byte[] RenderPng(QuotaSnapshot? snapshot, bool darkMenuBar, DateTimeOffset now)
     {
-        var alert = NeedsAlert(snapshot?.Codex) || NeedsAlert(snapshot?.Claude);
-        return new MenuBarImage(Draw(snapshot, new Inks(alert ? Mode(darkMenuBar) : InkMode.Template), now), !alert);
+        var inks = new Inks(darkMenuBar);
+        using var canvas = CreateCanvas(PointWidth, PointHeight);
+        DrawGroup(canvas, 0, "C", snapshot?.Codex, inks, now);
+        DrawGroup(canvas, GroupWidth + GroupGap, "A", snapshot?.Claude, inks, now);
+        return canvas.EncodePng();
     }
 
-    /// <summary>How the menu bar shows the image, in its label colour, for previews and the self-test.</summary>
-    internal static byte[] RenderPreviewPng(QuotaSnapshot? snapshot, bool darkMenuBar, DateTimeOffset now) =>
-        Draw(snapshot, new Inks(Mode(darkMenuBar)), now);
-
-    private static InkMode Mode(bool dark) => dark ? InkMode.Dark : InkMode.Light;
-
-    private static byte[] Draw(QuotaSnapshot? snapshot, Inks inks, DateTimeOffset now)
-    {
-        using var bitmap = new RenderTargetBitmap(
-            new PixelSize((int)(PointWidth * Scale), (int)(PointHeight * Scale)),
-            new Vector(96 * Scale, 96 * Scale));
-
-        using (var context = bitmap.CreateDrawingContext())
-        using (context.PushRenderOptions(new RenderOptions { TextRenderingMode = TextRenderingMode.Antialias }))
-        {
-            // Greyscale text smoothing: sub-pixel colour fringes look wrong once macOS composites the icon.
-            DrawGroup(context, 0, "C", snapshot?.Codex, inks, now);
-            DrawGroup(context, GroupWidth + GroupGap, "A", snapshot?.Claude, inks, now);
-        }
-
-        using var stream = new MemoryStream();
-        bitmap.Save(stream);
-        return stream.ToArray();
-    }
+    private static IThumbnailCanvas CreateCanvas(double width, double height) => OperatingSystem.IsMacOS()
+        ? new AppKitThumbnailCanvas(width, height, Scale)
+        : new AvaloniaThumbnailCanvas(width, height, Scale);
 
     private static void DrawGroup(
-        DrawingContext context,
+        IThumbnailCanvas canvas,
         double x,
         string letter,
         ProviderQuota? quota,
@@ -96,87 +77,98 @@ internal static class TrayIconRenderer
     {
         var available = quota?.IsAvailable == true;
 
-        var letterText = Measure(letter, LetterFace, 11, available ? inks.Label : inks.Muted);
-        context.DrawText(letterText, new Point(x + (LetterWidth - letterText.Width) / 2, (Height - letterText.Height) / 2));
+        var letterSize = canvas.Measure(letter, LetterSize, ThumbnailFont.Letter);
+        canvas.DrawText(letter, x + (LetterWidth - letterSize.Width) / 2, (Height - letterSize.Height) / 2,
+            LetterSize, ThumbnailFont.Letter, available ? inks.Label : inks.Muted);
 
         var ringLeft = x + LetterWidth + LetterToRing;
-        RingPainter.Draw(
-            context,
-            new Rect(ringLeft, (Height - RingDiameter) / 2, RingDiameter, RingDiameter),
-            available ? RingWindows(quota!) : Array.Empty<QuotaWindow>(),
-            RingStroke,
-            RingGap,
-            inks.Track,
-            window => inks.Alert(QuotaWindowLegend.BarHex(window) == QuotaWindowLegend.CriticalHex ? QuotaWindowLegend.CriticalHex : null));
+        DrawRings(canvas, new Point(ringLeft + RingDiameter / 2, Height / 2),
+            available ? quota!.Windows.Take(RingPainter.MaxRings).ToList() : Array.Empty<QuotaWindow>(), inks);
 
-        var textLeft = ringLeft + RingDiameter + RingToText;
+        var dotLeft = ringLeft + RingDiameter + RingToText;
+        var textLeft = dotLeft + DotDiameter + DotToText;
         if (!available)
         {
-            var offline = Measure("未连接", TextFace, TextSize, inks.Muted);
-            context.DrawText(offline, new Point(textLeft, (Height - offline.Height) / 2));
+            var offline = canvas.Measure("未连接", TextSize, ThumbnailFont.Text);
+            canvas.DrawText("未连接", dotLeft, (Height - offline.Height) / 2, TextSize, ThumbnailFont.Text, inks.Muted);
             return;
         }
 
-        var lines = TextWindows(quota!);
+        var lines = quota!.StandardWindows.Take(2).ToList();
+        if (lines.Count == 0) lines = quota.Windows.Take(2).ToList();
         var lineHeight = Height / 2;
         for (var index = 0; index < lines.Count; index++)
         {
             var window = lines[index];
             var text = $"{window.RemainingPercent:0}% {QuotaWindowLegend.CompactCountdown(window.ResetsAt, now)}";
-            var formatted = Measure(text, TextFace, TextSize, inks.Alert(QuotaWindowLegend.LevelHex(window.RemainingPercent)));
-            var top = lines.Count == 1
-                ? (Height - formatted.Height) / 2
-                : index * lineHeight + (lineHeight - formatted.Height) / 2;
-            context.DrawText(formatted, new Point(textLeft, top));
+            var size = canvas.Measure(text, TextSize, ThumbnailFont.Text);
+            var middle = lines.Count == 1 ? Height / 2 : (index + 0.5) * lineHeight;
+            canvas.FillCircle(new Point(dotLeft + DotDiameter / 2, middle), DotDiameter / 2, inks.Identity(window));
+            canvas.DrawText(text, textLeft, middle - size.Height / 2, TextSize, ThumbnailFont.Text,
+                inks.Level(window.RemainingPercent));
         }
     }
 
-    private static bool NeedsAlert(ProviderQuota? quota) =>
-        quota?.IsAvailable == true && (
-            TextWindows(quota).Any(window => QuotaWindowLegend.LevelHex(window.RemainingPercent) is not null) ||
-            RingWindows(quota).Any(window => QuotaWindowLegend.BarHex(window) == QuotaWindowLegend.CriticalHex));
-
-    private static IReadOnlyList<QuotaWindow> RingWindows(ProviderQuota quota) =>
-        quota.Windows.Take(RingPainter.MaxRings).ToList();
-
-    private static IReadOnlyList<QuotaWindow> TextWindows(ProviderQuota quota)
+    /// <summary>Same geometry as <see cref="RingPainter"/>: outer 5-hour, middle 7-day, inner model.</summary>
+    private static void DrawRings(IThumbnailCanvas canvas, Point centre, IReadOnlyList<QuotaWindow> windows, Inks inks)
     {
-        var lines = quota.StandardWindows.Take(2).ToList();
-        return lines.Count > 0 ? lines : quota.Windows.Take(2).ToList();
+        var rings = Math.Max(1, Math.Min(RingPainter.MaxRings, windows.Count));
+        for (var index = 0; index < rings; index++)
+        {
+            var radius = RingDiameter / 2 - RingStroke / 2 - index * (RingStroke + RingGap);
+            if (index >= windows.Count)
+            {
+                canvas.StrokeCircle(centre, radius, RingStroke, inks.EmptyTrack);
+                continue;
+            }
+
+            var window = windows[index];
+            canvas.StrokeCircle(centre, radius, RingStroke, inks.Track(window));
+            var fraction = Math.Clamp(window.RemainingPercent, 0, 100) / 100;
+            if (fraction > 0.005) canvas.StrokeArc(centre, radius, fraction, RingStroke, inks.Arc(window));
+        }
     }
 
-    private static FormattedText Measure(string text, Typeface face, double size, IBrush brush) =>
-        new(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, face, size, brush);
-
-    private enum InkMode
-    {
-        /// <summary>Black with alpha only; macOS supplies the colour.</summary>
-        Template,
-        Dark,
-        Light
-    }
-
-    /// <summary>The few colours a thumbnail uses in one mode.</summary>
+    /// <summary>The colours of one appearance.</summary>
     private readonly struct Inks
     {
-        private readonly InkMode _mode;
+        private readonly bool _dark;
 
-        public Inks(InkMode mode) => _mode = mode;
+        public Inks(bool dark) => _dark = dark;
 
-        // Approximations of the menu bar's label colour; macOS uses the real one for templates.
-        public IBrush Label => QuotaPalette.Hex(_mode switch { InkMode.Dark => "#F2FFFFFF", InkMode.Light => "#D9000000", _ => "#FF000000" });
-        public IBrush Muted => QuotaPalette.Hex(_mode switch { InkMode.Dark => "#8CFFFFFF", InkMode.Light => "#80000000", _ => "#80000000" });
-        public IBrush Track => QuotaPalette.Hex(_mode switch { InkMode.Dark => "#40FFFFFF", InkMode.Light => "#2E000000", _ => "#40000000" });
+        // Approximations of the menu bar's label colours.
+        public Color Label => Color.Parse(_dark ? "#F2FFFFFF" : "#D9000000");
+        public Color Muted => Color.Parse(_dark ? "#8CFFFFFF" : "#80000000");
+        public Color EmptyTrack => Color.Parse(_dark ? "#40FFFFFF" : "#2E000000");
 
-        /// <summary>The label colour, or the alert colour for a warning or critical palette colour.</summary>
-        public IBrush Alert(string? levelHex) => levelHex switch
+        public Color Identity(QuotaWindow window) => Color.Parse(Shade(QuotaWindowLegend.IdentityHex(window)));
+
+        /// <summary>The identity colour at low opacity, like an Activity ring's track.</summary>
+        public Color Track(QuotaWindow window)
         {
-            // Apple's increased-contrast systemRed and systemOrange.
-            QuotaWindowLegend.CriticalHex when _mode == InkMode.Dark => QuotaPalette.Hex("#FF6165"),
-            QuotaWindowLegend.CriticalHex when _mode == InkMode.Light => QuotaPalette.Hex("#E9152D"),
-            QuotaWindowLegend.WarningHex when _mode == InkMode.Dark => QuotaPalette.Hex("#FFA056"),
-            QuotaWindowLegend.WarningHex when _mode == InkMode.Light => QuotaPalette.Hex("#C55300"),
-            _ => Label
+            var colour = Identity(window);
+            return new Color((byte)(_dark ? 0x4D : 0x40), colour.R, colour.G, colour.B);
+        }
+
+        public Color Arc(QuotaWindow window) =>
+            QuotaWindowLegend.BarHex(window) == QuotaWindowLegend.CriticalHex ? Alert(QuotaWindowLegend.CriticalHex) : Identity(window);
+
+        /// <summary>Label colour, or the alert colour when the percentage is low.</summary>
+        public Color Level(double remaining) =>
+            QuotaWindowLegend.LevelHex(remaining) is string hex ? Alert(hex) : Label;
+
+        // Apple's increased-contrast systemRed and systemOrange.
+        private Color Alert(string hex) => Color.Parse(hex == QuotaWindowLegend.CriticalHex
+            ? _dark ? "#FF6165" : "#E9152D"
+            : _dark ? "#FFA056" : "#C55300");
+
+        /// <summary>The palette colour on dark menu bars; a deeper shade of it on light ones.</summary>
+        private string Shade(string hex) => _dark ? hex : hex switch
+        {
+            QuotaWindowLegend.SessionHex => "#0E2FFD",
+            QuotaWindowLegend.WeeklyHex => "#A211AC",
+            QuotaWindowLegend.ModelHex => "#1D8071",
+            _ => "#4E5A6E"
         };
     }
 }

@@ -68,10 +68,9 @@ internal sealed class MacStatusItem : IDisposable
 
     /// <summary>
     /// Sets a PNG as the item image, displayed at <paramref name="widthPoints"/> ×
-    /// <paramref name="heightPoints"/> (the PNG itself is rendered at 2× for Retina). A template image
-    /// only contributes its alpha; macOS tints it like its own menu bar items.
+    /// <paramref name="heightPoints"/> (the PNG itself is rendered at 2× for Retina).
     /// </summary>
-    public void SetImage(byte[] png, double widthPoints, double heightPoints, bool template)
+    public void SetImage(byte[] png, double widthPoints, double heightPoints)
     {
         var handle = GCHandle.Alloc(png, GCHandleType.Pinned);
         try
@@ -81,7 +80,7 @@ internal sealed class MacStatusItem : IDisposable
             if (image == IntPtr.Zero) return;
 
             SendSize(image, Sel("setSize:"), new CGSize { Width = widthPoints, Height = heightPoints });
-            SendBool(image, Sel("setTemplate:"), template);
+            SendBool(image, Sel("setTemplate:"), false);
             SendPtr(_button, Sel("setImage:"), image);
             Send(image, Sel("release"));
         }
@@ -93,7 +92,7 @@ internal sealed class MacStatusItem : IDisposable
 
     /// <summary>
     /// Whether the menu bar draws this item in a dark appearance, read from the button's effective
-    /// appearance (the menu bar's, not the system setting's); null when it cannot be read.
+    /// appearance, which follows the menu bar rather than the system setting; null when unreadable.
     /// </summary>
     public bool? IsDarkAppearance()
     {

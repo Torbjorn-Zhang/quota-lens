@@ -7,8 +7,8 @@ namespace QuotaLens.Mac.Rendering;
 /// <summary>
 /// Concentric quota rings, one per window from the outside in (5-hour, 7-day, model allowance, at
 /// most three): a faint full track plus a clockwise arc from twelve o'clock covering what remains,
-/// in the window's identity colour (red at 20% or less) unless the caller picks the arc colour, as
-/// the monochrome menu bar thumbnail does. Same geometry as the Windows sidebar.
+/// in the window's identity colour (red at 20% or less). Same geometry as the Windows sidebar and
+/// the menu bar thumbnail.
 /// </summary>
 internal static class RingPainter
 {
@@ -20,8 +20,7 @@ internal static class RingPainter
         IReadOnlyList<QuotaWindow> windows,
         double stroke,
         double gap,
-        IBrush track,
-        Func<QuotaWindow, IBrush>? arcBrush = null)
+        IBrush track)
     {
         var size = Math.Min(bounds.Width, bounds.Height);
         var center = bounds.Center;
@@ -40,13 +39,12 @@ internal static class RingPainter
             var fraction = Math.Clamp(window.RemainingPercent, 0, 100) / 100;
             if (fraction <= 0.005) continue;
 
-            var brush = arcBrush?.Invoke(window) ?? QuotaPalette.Bar(window);
-            context.DrawGeometry(null, new Pen(brush, stroke, lineCap: PenLineCap.Round), Arc(center, radius, fraction));
+            context.DrawGeometry(null, new Pen(QuotaPalette.Bar(window), stroke, lineCap: PenLineCap.Round), Arc(center, radius, fraction));
         }
     }
 
     /// <summary>Clockwise arc from twelve o'clock covering <paramref name="fraction"/> of the circle.</summary>
-    private static Geometry Arc(Point center, double radius, double fraction)
+    internal static Geometry Arc(Point center, double radius, double fraction)
     {
         if (fraction >= 0.999) return new EllipseGeometry(new Rect(center.X - radius, center.Y - radius, 2 * radius, 2 * radius));
 
