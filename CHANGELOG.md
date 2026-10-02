@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed / 变更
+
+- Easier-to-read quota colours: sky blue 5-hour, orchid 7-day, and mint model allowance replace the cyan, lavender, and green that were hard to tell apart (the outer and inner rings were too close for full-colour vision) and that faded over bright backgrounds. Every pair now stays distinct for red-green colour-blind readers too, and a parser check keeps every quota colour at 4.5:1 or more on the surfaces it is drawn on / 额度颜色更易辨认：5 小时改为天蓝、7 天改为兰紫、模型专项改为薄荷绿，取代原来难以区分（最外圈与最内圈颜色过近）且在亮背景上发虚的青、淡紫、绿；三种颜色对红绿色盲读者也能区分，并新增测试保证每种额度颜色在实际背景上的对比度不低于 4.5:1
+- macOS: the menu bar thumbnail sits on its own rounded plate (dark glass on dark menu bars, near-white on light ones), because the macOS 26 menu bar is transparent and bright or busy wallpapers washed the colours out; on light menu bars the rings now use the deeper light-surface shades like the text / macOS：菜单栏缩略图加了圆角底板（深色菜单栏用深色玻璃，浅色菜单栏用近白色），因为 macOS 26 的菜单栏是透明的，亮色或花哨的壁纸会让颜色看不清；浅色菜单栏上的圆环也和文字一样改用加深的颜色
+- Windows: the sidebar strip, and the panel while the cursor is on it or it is slid out of the sidebar, always use the full glass density, so a bright desktop no longer shows through; the transparency setting now applies only while the floating widget sits idle / Windows：贴边竖条，以及鼠标停在面板上或从侧栏滑出时的面板，始终使用最高玻璃浓度，亮色桌面不再透出来；透明度设置只作用于闲置时的悬浮窗
+
 ### Planned / 计划
 
 - In-app language switching / 应用内语言切换
