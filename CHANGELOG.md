@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Planned / 计划
+
+- In-app language switching / 应用内语言切换
+- Signed installer and update channel / 签名安装包与更新通道
+
+## [0.6.0] - 2026-10-02
+
 ### Added / 新增
 
 - macOS menu bar app (Apple Silicon and Intel, macOS 11+): the menu bar thumbnail shows Codex and Claude as two sets of concentric rings, each with the 5-hour and 7-day remaining percentage and reset countdown beside it (for example `77% 2h01m`); a click drops the ring panel below the icon with each quota window's remaining percentage and a live reset countdown, plus refresh, display-off-while-awake, launch at login (a per-user LaunchAgent), and low-quota notifications. Released as ad-hoc signed `QuotaLens-*-macos-arm64.zip` / `-x64.zip` / 新增 macOS 菜单栏应用（Apple Silicon 与 Intel，macOS 11 及以上）：菜单栏缩略图用两组同心圆显示 Codex 与 Claude，旁边各有 5 小时与 7 天的剩余百分比和重置倒计时（如 `77% 2h01m`）；点一下在图标下方弹出同心圆详情面板，逐项显示剩余百分比与实时重置倒计时，并提供刷新、息屏保持运行、登录时启动（当前用户 LaunchAgent）和低额度通知。以临时签名的 `QuotaLens-*-macos-arm64.zip` / `-x64.zip` 发布
@@ -15,11 +22,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ### Changed / 变更
 
 - Quota logic moved into a cross-platform `src/QuotaLens.Core` library shared by the Windows (WPF) and macOS (Avalonia) apps; the parser checks now run on both Windows and macOS CI, and releases include the macOS builds / 额度逻辑移入跨平台的 `src/QuotaLens.Core`，由 Windows（WPF）与 macOS（Avalonia）两端共用；解析器测试在 Windows 与 macOS CI 上都会运行，发布包含 macOS 版本
-
-### Planned / 计划
-
-- In-app language switching / 应用内语言切换
-- Signed installer and update channel / 签名安装包与更新通道
 
 ## [0.5.0] - 2026-10-01
 
@@ -102,7 +104,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - Initial Codex and Claude Code quota monitoring / 初始 Codex 与 Claude Code 额度监控
 
-[Unreleased]: https://github.com/Torbjorn-Zhang/quota-lens/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/Torbjorn-Zhang/quota-lens/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.6.0
 [0.5.0]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.5.0
 [0.4.7]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.4.7
 [0.4.6]: https://github.com/Torbjorn-Zhang/quota-lens/releases/tag/v0.4.6
