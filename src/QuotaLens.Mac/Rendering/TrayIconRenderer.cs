@@ -15,18 +15,15 @@ namespace QuotaLens.Mac.Rendering;
 /// <remarks>
 /// Each text block reserves the width of its widest possible value, so the menu bar item keeps a
 /// constant width as the countdown ticks and never nudges the neighbouring icons. The image is
-/// coloured, not a template, so it sits on its own rounded plate: since macOS 26 the menu bar is
-/// transparent and a bright or busy wallpaper would otherwise wash the colours out. The plate is the
-/// panel's dark glass on dark bars and near-white on light bars, where rings and text switch to the
-/// palette's deeper light-surface shades; either way they keep 4.5:1 over any wallpaper.
+/// coloured, not a template, and the macOS 26 menu bar is transparent, so the background stays clear
+/// and every glyph and ring arc gets a thin outline instead: dark glass around the bright palette on
+/// dark bars, white around the palette's deeper light-surface shades on light bars. The outline keeps
+/// the colours readable on bright or busy wallpapers without a solid plate.
 /// </remarks>
 internal static class TrayIconRenderer
 {
     private const double Height = 22;
-    private const double PlatePadding = 3;
-    private const double PlateRadius = 5;
-    private const string DarkPlate = "#E00F1526";
-    private const string LightPlate = "#F0FFFFFF";
+    private const double EdgePadding = 1.5;
     private const double RingDiameter = 17;
     private const double RingStroke = 1.9;
     private const double RingGap = 0.6;
@@ -38,13 +35,19 @@ internal static class TrayIconRenderer
     private const double Scale = 2;
     private const string WidestLine = "100% 23h59m";
 
+    // Outline pens are centred on the glyph and arc edges, so about half of each width shows outside.
+    private const double TextOutline = 1.6;
+    private const double RingOutline = RingGap * 2;
+    private const string DarkOutline = "#E00F1526";
+    private const string LightOutline = "#F0FFFFFF";
+
     private static readonly Typeface LetterFace =
         new("Helvetica Neue, Segoe UI, Arial", FontStyle.Normal, FontWeight.Bold);
     private static readonly Typeface TextFace =
         new("Helvetica Neue, Segoe UI, Arial", FontStyle.Normal, FontWeight.SemiBold);
 
     /// <summary>Display size of the thumbnail in points; the PNG is rendered at twice this.</summary>
-    internal static double PointWidth => Math.Ceiling(2 * GroupWidth + GroupGap + 2 * PlatePadding);
+    internal static double PointWidth => Math.Ceiling(2 * GroupWidth + GroupGap + 2 * EdgePadding);
     internal static double PointHeight => Height;
 
     private static double TextBlockWidth => Math.Ceiling(Measure(WidestLine, TextFace, TextSize, Brushes.White).Width) + 1;
@@ -60,14 +63,8 @@ internal static class TrayIconRenderer
         using (context.PushRenderOptions(new RenderOptions { TextRenderingMode = TextRenderingMode.Antialias }))
         {
             // Greyscale text smoothing: sub-pixel colour fringes look wrong once macOS composites the icon.
-            context.DrawRectangle(
-                QuotaPalette.Hex(darkMenuBar ? DarkPlate : LightPlate),
-                null,
-                new Rect(0, 0, PointWidth, PointHeight),
-                PlateRadius,
-                PlateRadius);
-            DrawGroup(context, PlatePadding, "C", snapshot?.Codex, darkMenuBar, now);
-            DrawGroup(context, PlatePadding + GroupWidth + GroupGap, "A", snapshot?.Claude, darkMenuBar, now);
+            DrawGroup(context, EdgePadding, "C", snapshot?.Codex, darkMenuBar, now);
+            DrawGroup(context, EdgePadding + GroupWidth + GroupGap, "A", snapshot?.Claude, darkMenuBar, now);
         }
 
         using var stream = new MemoryStream();
@@ -85,9 +82,10 @@ internal static class TrayIconRenderer
     {
         var available = quota?.IsAvailable == true;
         var muted = QuotaPalette.Hex(dark ? "#9DB2C8" : "#5F6878");
+        var outline = QuotaPalette.Hex(dark ? DarkOutline : LightOutline);
 
         var letterText = Measure(letter, LetterFace, 11, available ? QuotaPalette.Hex(dark ? "#EAF0FF" : "#1C2230") : muted);
-        context.DrawText(letterText, new Point(x + (LetterWidth - letterText.Width) / 2, (Height - letterText.Height) / 2));
+        DrawOutlined(context, letterText, new Point(x + (LetterWidth - letterText.Width) / 2, (Height - letterText.Height) / 2), outline);
 
         var ringLeft = x + LetterWidth + LetterToRing;
         RingPainter.Draw(
@@ -97,13 +95,15 @@ internal static class TrayIconRenderer
             RingStroke,
             RingGap,
             QuotaPalette.Hex(dark ? "#38FFFFFF" : "#30000000"),
-            onLight: !dark);
+            onLight: !dark,
+            outline: outline,
+            outlineWidth: RingOutline);
 
         var textLeft = ringLeft + RingDiameter + RingToText;
         if (!available)
         {
             var offline = Measure("未连接", TextFace, TextSize, muted);
-            context.DrawText(offline, new Point(textLeft, (Height - offline.Height) / 2));
+            DrawOutlined(context, offline, new Point(textLeft, (Height - offline.Height) / 2), outline);
             return;
         }
 
@@ -118,8 +118,18 @@ internal static class TrayIconRenderer
             var top = lines.Count == 1
                 ? (Height - formatted.Height) / 2
                 : index * lineHeight + (lineHeight - formatted.Height) / 2;
-            context.DrawText(formatted, new Point(textLeft, top));
+            DrawOutlined(context, formatted, new Point(textLeft, top), outline);
         }
+    }
+
+    /// <summary>Strokes the glyph outlines first, then draws the text over them.</summary>
+    private static void DrawOutlined(DrawingContext context, FormattedText text, Point origin, IBrush outline)
+    {
+        if (text.BuildGeometry(origin) is Geometry glyphs)
+        {
+            context.DrawGeometry(null, new Pen(outline, TextOutline, lineJoin: PenLineJoin.Round), glyphs);
+        }
+        context.DrawText(text, origin);
     }
 
     /// <summary>Identity colour of the window (warning colour when low), deepened for light menu bars.</summary>

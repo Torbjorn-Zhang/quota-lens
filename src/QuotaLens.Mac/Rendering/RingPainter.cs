@@ -8,7 +8,8 @@ namespace QuotaLens.Mac.Rendering;
 /// Concentric quota rings, one per window from the outside in (5-hour, 7-day, model allowance, at
 /// most three): a faint full track plus a clockwise arc from twelve o'clock covering what remains,
 /// in the window's identity colour (red at 20% or less), deepened on light surfaces. Same geometry
-/// as the Windows sidebar.
+/// as the Windows sidebar. An optional outline is stroked under every arc, all outlines before any
+/// arc so an inner ring's outline never covers its outer neighbour.
 /// </summary>
 internal static class RingPainter
 {
@@ -21,12 +22,15 @@ internal static class RingPainter
         double stroke,
         double gap,
         IBrush track,
-        bool onLight = false)
+        bool onLight = false,
+        IBrush? outline = null,
+        double outlineWidth = 0)
     {
         var size = Math.Min(bounds.Width, bounds.Height);
         var center = bounds.Center;
         var rings = Math.Max(1, Math.Min(MaxRings, windows.Count));
         var trackPen = new Pen(track, stroke);
+        var arcs = new List<(Geometry Arc, IBrush Brush)>();
 
         for (var index = 0; index < rings; index++)
         {
@@ -39,26 +43,36 @@ internal static class RingPainter
             var window = windows[index];
             var fraction = Math.Clamp(window.RemainingPercent, 0, 100) / 100;
             if (fraction <= 0.005) continue;
-
-            var pen = new Pen(QuotaPalette.Bar(window, onLight), stroke, lineCap: PenLineCap.Round);
-            if (fraction >= 0.999)
-            {
-                context.DrawEllipse(null, pen, center, radius, radius);
-                continue;
-            }
-
-            var angle = fraction * 2 * Math.PI;
-            var start = new Point(center.X, center.Y - radius);
-            var end = new Point(center.X + radius * Math.Sin(angle), center.Y - radius * Math.Cos(angle));
-            var geometry = new StreamGeometry();
-            using (var figure = geometry.Open())
-            {
-                figure.BeginFigure(start, isFilled: false);
-                figure.ArcTo(end, new Size(radius, radius), 0, fraction > 0.5, SweepDirection.Clockwise);
-                figure.EndFigure(isClosed: false);
-            }
-            context.DrawGeometry(null, pen, geometry);
+            arcs.Add((Arc(center, radius, fraction), QuotaPalette.Bar(window, onLight)));
         }
+
+        if (outline is not null)
+        {
+            var outlinePen = new Pen(outline, stroke + outlineWidth, lineCap: PenLineCap.Round);
+            foreach (var (arc, _) in arcs) context.DrawGeometry(null, outlinePen, arc);
+        }
+        foreach (var (arc, brush) in arcs)
+        {
+            context.DrawGeometry(null, new Pen(brush, stroke, lineCap: PenLineCap.Round), arc);
+        }
+    }
+
+    /// <summary>Clockwise arc from twelve o'clock covering <paramref name="fraction"/> of the circle.</summary>
+    private static Geometry Arc(Point center, double radius, double fraction)
+    {
+        if (fraction >= 0.999) return new EllipseGeometry(new Rect(center.X - radius, center.Y - radius, 2 * radius, 2 * radius));
+
+        var angle = fraction * 2 * Math.PI;
+        var start = new Point(center.X, center.Y - radius);
+        var end = new Point(center.X + radius * Math.Sin(angle), center.Y - radius * Math.Cos(angle));
+        var geometry = new StreamGeometry();
+        using (var figure = geometry.Open())
+        {
+            figure.BeginFigure(start, isFilled: false);
+            figure.ArcTo(end, new Size(radius, radius), 0, fraction > 0.5, SweepDirection.Clockwise);
+            figure.EndFigure(isClosed: false);
+        }
+        return geometry;
     }
 }
 
