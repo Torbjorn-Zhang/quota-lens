@@ -124,10 +124,12 @@ build_from_source() {
 
     ensure_dotnet
     export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
-    # Keep every .NET/NuGet cache inside build_cache, so nothing is left in ~/.nuget or ~/.dotnet.
+    # Keep every .NET/NuGet cache inside build_cache, so nothing is left in ~/.nuget, ~/.dotnet or
+    # ~/.local/share/NuGet (.NET maps its local app data folder to XDG_DATA_HOME on macOS).
     export NUGET_PACKAGES="${NUGET_PACKAGES:-$build_cache/nuget}"
     export NUGET_HTTP_CACHE_PATH="${NUGET_HTTP_CACHE_PATH:-$build_cache/nuget-http}"
     export DOTNET_CLI_HOME="${DOTNET_CLI_HOME:-$build_cache/cli-home}"
+    export XDG_DATA_HOME="$build_cache/data"
     if [[ "$keep_cache" == 1 ]]; then
         say "构建 QuotaLens.app（$rid），构建缓存保留在 $build_cache"
     else
