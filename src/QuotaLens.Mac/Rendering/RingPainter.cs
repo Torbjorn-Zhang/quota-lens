@@ -7,9 +7,8 @@ namespace QuotaLens.Mac.Rendering;
 /// <summary>
 /// Concentric quota rings, one per window from the outside in (5-hour, 7-day, model allowance, at
 /// most three): a faint full track plus a clockwise arc from twelve o'clock covering what remains,
-/// in the window's identity colour (red at 20% or less), deepened on light surfaces. Same geometry
-/// as the Windows sidebar. An optional outline is stroked under every arc, all outlines before any
-/// arc so an inner ring's outline never covers its outer neighbour.
+/// in the window's identity colour (red at 20% or less) unless the caller picks the arc colour, as
+/// the monochrome menu bar thumbnail does. Same geometry as the Windows sidebar.
 /// </summary>
 internal static class RingPainter
 {
@@ -22,15 +21,12 @@ internal static class RingPainter
         double stroke,
         double gap,
         IBrush track,
-        bool onLight = false,
-        IBrush? outline = null,
-        double outlineWidth = 0)
+        Func<QuotaWindow, IBrush>? arcBrush = null)
     {
         var size = Math.Min(bounds.Width, bounds.Height);
         var center = bounds.Center;
         var rings = Math.Max(1, Math.Min(MaxRings, windows.Count));
         var trackPen = new Pen(track, stroke);
-        var arcs = new List<(Geometry Arc, IBrush Brush)>();
 
         for (var index = 0; index < rings; index++)
         {
@@ -43,17 +39,9 @@ internal static class RingPainter
             var window = windows[index];
             var fraction = Math.Clamp(window.RemainingPercent, 0, 100) / 100;
             if (fraction <= 0.005) continue;
-            arcs.Add((Arc(center, radius, fraction), QuotaPalette.Bar(window, onLight)));
-        }
 
-        if (outline is not null)
-        {
-            var outlinePen = new Pen(outline, stroke + outlineWidth, lineCap: PenLineCap.Round);
-            foreach (var (arc, _) in arcs) context.DrawGeometry(null, outlinePen, arc);
-        }
-        foreach (var (arc, brush) in arcs)
-        {
-            context.DrawGeometry(null, new Pen(brush, stroke, lineCap: PenLineCap.Round), arc);
+            var brush = arcBrush?.Invoke(window) ?? QuotaPalette.Bar(window);
+            context.DrawGeometry(null, new Pen(brush, stroke, lineCap: PenLineCap.Round), Arc(center, radius, fraction));
         }
     }
 

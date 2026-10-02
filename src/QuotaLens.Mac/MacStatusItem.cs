@@ -68,9 +68,10 @@ internal sealed class MacStatusItem : IDisposable
 
     /// <summary>
     /// Sets a PNG as the item image, displayed at <paramref name="widthPoints"/> ×
-    /// <paramref name="heightPoints"/> (the PNG itself is rendered at 2× for Retina).
+    /// <paramref name="heightPoints"/> (the PNG itself is rendered at 2× for Retina). A template image
+    /// only contributes its alpha; macOS tints it like its own menu bar items.
     /// </summary>
-    public void SetImage(byte[] png, double widthPoints, double heightPoints)
+    public void SetImage(byte[] png, double widthPoints, double heightPoints, bool template)
     {
         var handle = GCHandle.Alloc(png, GCHandleType.Pinned);
         try
@@ -80,7 +81,7 @@ internal sealed class MacStatusItem : IDisposable
             if (image == IntPtr.Zero) return;
 
             SendSize(image, Sel("setSize:"), new CGSize { Width = widthPoints, Height = heightPoints });
-            SendBool(image, Sel("setTemplate:"), false);
+            SendBool(image, Sel("setTemplate:"), template);
             SendPtr(_button, Sel("setImage:"), image);
             Send(image, Sel("release"));
         }
@@ -88,6 +89,19 @@ internal sealed class MacStatusItem : IDisposable
         {
             handle.Free();
         }
+    }
+
+    /// <summary>
+    /// Whether the menu bar draws this item in a dark appearance, read from the button's effective
+    /// appearance (the menu bar's, not the system setting's); null when it cannot be read.
+    /// </summary>
+    public bool? IsDarkAppearance()
+    {
+        var appearance = Send(_button, Sel("effectiveAppearance"));
+        var name = appearance == IntPtr.Zero ? IntPtr.Zero : Send(appearance, Sel("name"));
+        var utf8 = name == IntPtr.Zero ? IntPtr.Zero : Send(name, Sel("UTF8String"));
+        var text = utf8 == IntPtr.Zero ? null : Marshal.PtrToStringUTF8(utf8);
+        return text?.Contains("Dark", StringComparison.Ordinal);
     }
 
     public void SetToolTip(string text) =>

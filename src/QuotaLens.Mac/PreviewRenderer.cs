@@ -18,10 +18,14 @@ internal static class PreviewRenderer
         var snapshot = SampleSnapshot();
 
         var now = snapshot.FetchedAt;
-        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-dark.png"), TrayIconRenderer.RenderPng(snapshot, darkMenuBar: true, now));
-        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-light.png"), TrayIconRenderer.RenderPng(snapshot, darkMenuBar: false, now));
+        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-dark.png"), TrayIconRenderer.RenderPreviewPng(snapshot, darkMenuBar: true, now));
+        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-light.png"), TrayIconRenderer.RenderPreviewPng(snapshot, darkMenuBar: false, now));
+        // Without a low window the thumbnail is the monochrome template image macOS tints itself.
+        var calm = snapshot with { Claude = snapshot.Claude with { Windows = snapshot.Claude.Windows.Select(window => window with { UsedPercent = Math.Min(window.UsedPercent, 45) }).ToList() } };
+        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-calm-dark.png"), TrayIconRenderer.RenderPreviewPng(calm, darkMenuBar: true, now));
+        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-calm-light.png"), TrayIconRenderer.RenderPreviewPng(calm, darkMenuBar: false, now));
         var codexOffline = snapshot with { Codex = ProviderQuota.Failed("Codex", "Codex 登录已过期，请在客户端中重新登录。") };
-        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-offline.png"), TrayIconRenderer.RenderPng(codexOffline, darkMenuBar: true, now));
+        File.WriteAllBytes(Path.Combine(directory, "menubar-icon-offline.png"), TrayIconRenderer.RenderPreviewPng(codexOffline, darkMenuBar: true, now));
 
         File.WriteAllBytes(Path.Combine(directory, "app-icon.png"), AppIconRenderer.RenderPng());
 

@@ -128,10 +128,8 @@ internal sealed class QuotaController : IDisposable
     private void UpdateStatusItem()
     {
         if (_statusItem is null || !OperatingSystem.IsMacOS()) return;
-        _statusItem.SetImage(
-            TrayIconRenderer.RenderPng(_snapshot, IsDarkMenuBar(), DateTimeOffset.Now),
-            TrayIconRenderer.PointWidth,
-            TrayIconRenderer.PointHeight);
+        var image = TrayIconRenderer.Render(_snapshot, IsDarkMenuBar(), DateTimeOffset.Now);
+        _statusItem.SetImage(image.Png, TrayIconRenderer.PointWidth, TrayIconRenderer.PointHeight, image.IsTemplate);
         _statusItem.SetToolTip(_snapshot is null
             ? "Quota Lens · 正在获取额度"
             : $"Quota Lens · Codex {PrimaryRemaining(_snapshot.Codex)} · Claude {PrimaryRemaining(_snapshot.Claude)}");
@@ -256,8 +254,11 @@ internal sealed class QuotaController : IDisposable
         StartupLog.Write($"self-test: countdowns shown: {string.Join(" | ", _panel.Panel.CountdownTexts())}");
         SaveSelfTestSnapshot();
         var thumbnail = Path.Combine(AppPaths.DataDirectory, "self-test-menubar.png");
-        File.WriteAllBytes(thumbnail, TrayIconRenderer.RenderPng(_snapshot, IsDarkMenuBar(), DateTimeOffset.Now));
-        StartupLog.Write($"self-test: menu bar thumbnail rendered to {thumbnail} (dark={IsDarkMenuBar()})");
+        File.WriteAllBytes(thumbnail, TrayIconRenderer.RenderPreviewPng(_snapshot, IsDarkMenuBar(), DateTimeOffset.Now));
+        StartupLog.Write(
+            $"self-test: menu bar thumbnail rendered to {thumbnail} (dark={IsDarkMenuBar()} " +
+            $"template={TrayIconRenderer.Render(_snapshot, IsDarkMenuBar(), DateTimeOffset.Now).IsTemplate} " +
+            $"font={TrayIconRenderer.ResolvedFontFamily})");
 
         await Task.Delay(TimeSpan.FromSeconds(1));
         _statusItem.PerformClick();
@@ -335,8 +336,13 @@ internal sealed class QuotaController : IDisposable
         }
     }
 
+    /// <summary>
+    /// The menu bar's own appearance when the status item can report it, else the system theme. Only
+    /// matters while an alert colour is shown; template images are tinted by macOS.
+    /// </summary>
     private bool IsDarkMenuBar() =>
-        _app.PlatformSettings?.GetColorValues().ThemeVariant != PlatformThemeVariant.Light;
+        (OperatingSystem.IsMacOS() ? _statusItem?.IsDarkAppearance() : null)
+        ?? _app.PlatformSettings?.GetColorValues().ThemeVariant != PlatformThemeVariant.Light;
 
     private AppSettings LoadSettings()
     {
