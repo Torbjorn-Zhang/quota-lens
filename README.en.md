@@ -74,7 +74,7 @@ The current release is not commercially code-signed, so Windows SmartScreen may 
 
 ### macOS
 
-- The menu bar thumbnail is the counterpart of the Windows sidebar strip and sits on its own rounded plate (dark on dark menu bars, near-white on light ones), so it stays legible over any wallpaper behind the transparent menu bar: `C` is Codex and `A` is Claude; each ring set shows the 5-hour window outside, 7 days in the middle, and the model allowance inside, in the same colours as on Windows. Beside the rings, two lines give the 5-hour and 7-day remaining percentage and reset countdown (for example `77% 2h01m` and `73% 2d14h`), refreshed every 30 seconds and turning orange or red when low.
+- The menu bar thumbnail is the counterpart of the Windows sidebar strip. Its background stays clear while text and rings carry a thin outline (dark on dark menu bars, white on light ones), so it stays legible over any wallpaper behind the transparent menu bar: `C` is Codex and `A` is Claude; each ring set shows the 5-hour window outside, 7 days in the middle, and the model allowance inside, in the same colours as on Windows. Beside the rings, two lines give the 5-hour and 7-day remaining percentage and reset countdown (for example `77% 2h01m` and `73% 2d14h`), refreshed every 30 seconds and turning orange or red when low.
 - Click the icon to drop the ring panel below it: one row per quota window with its remaining percentage and a reset countdown that ticks every second (for example “2时1分后 · 10/1 03:40”), matching the Windows panel. Click elsewhere or the icon again to hide it.
 - `↻` in the panel refreshes now; the bottom row toggles launch at login and low-quota alerts, and offers display-off-while-awake and quit (labels are in Chinese).
 
