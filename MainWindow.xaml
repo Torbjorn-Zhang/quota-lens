@@ -102,21 +102,21 @@
                 MouseLeftButtonDown="StripFrame_MouseLeftButtonDown">
             <StackPanel>
                 <!-- Concentric rings: outer 5-hour, middle 7-day, inner model allowance. -->
-                <Grid x:Name="StripCodexBadge" Width="48" Height="48" HorizontalAlignment="Center">
-                    <Canvas x:Name="StripCodexRings" />
-                    <TextBlock Text="C" FontSize="12" FontWeight="SemiBold" Foreground="#F0F4FF"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Grid>
-                <StackPanel x:Name="StripCodexRows" HorizontalAlignment="Center" Margin="0,5,0,0" />
-
-                <Border Height="1" Background="#24FFFFFF" Margin="8,9,8,9" />
-
                 <Grid x:Name="StripClaudeBadge" Width="48" Height="48" HorizontalAlignment="Center">
                     <Canvas x:Name="StripClaudeRings" />
                     <TextBlock Text="A" FontSize="12" FontWeight="SemiBold" Foreground="#FFF1E6DA"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Grid>
                 <StackPanel x:Name="StripClaudeRows" HorizontalAlignment="Center" Margin="0,5,0,0" />
+
+                <Border Height="1" Background="#24FFFFFF" Margin="8,9,8,9" />
+
+                <Grid x:Name="StripCodexBadge" Width="48" Height="48" HorizontalAlignment="Center">
+                    <Canvas x:Name="StripCodexRings" />
+                    <TextBlock Text="C" FontSize="12" FontWeight="SemiBold" Foreground="#F0F4FF"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Grid>
+                <StackPanel x:Name="StripCodexRows" HorizontalAlignment="Center" Margin="0,5,0,0" />
             </StackPanel>
         </Border>
 
@@ -170,67 +170,6 @@
                 </Grid>
 
                 <StackPanel Grid.Row="1">
-                    <Border Style="{StaticResource ProviderCard}">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="34" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <Border Width="28" Height="28" CornerRadius="9" Background="#2FE8ECFF" Margin="0,0,9,0">
-                                    <TextBlock Text="C" FontSize="13" FontWeight="SemiBold" Foreground="#F0F4FF"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Codex" FontSize="14" FontWeight="SemiBold" />
-                                    <TextBlock x:Name="CodexPlanText" Text="正在连接" Style="{StaticResource MutedText}" />
-                                </StackPanel>
-                                <Ellipse x:Name="CodexStatusDot" Grid.Column="2" Width="7" Height="7"
-                                         Fill="{StaticResource MutedBrush}" VerticalAlignment="Center" />
-                            </Grid>
-
-                            <Grid x:Name="CodexContentPanel" Grid.Row="1" Margin="0,8,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="18" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-
-                                <StackPanel>
-                                    <Grid>
-                                        <TextBlock x:Name="CodexPrimaryName" Text="5 小时" Style="{StaticResource MutedText}" />
-                                        <TextBlock x:Name="CodexPrimaryValue" Text="—" Style="{StaticResource QuotaValue}"
-                                                   HorizontalAlignment="Right" />
-                                    </Grid>
-                                    <ProgressBar x:Name="CodexPrimaryBar" Style="{StaticResource GlassProgress}" Margin="0,5,0,4" />
-                                    <TextBlock x:Name="CodexPrimaryReset" Text="等待刷新" Style="{StaticResource MutedText}" />
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="2">
-                                    <Grid>
-                                        <TextBlock x:Name="CodexSecondaryName" Text="7 天" Style="{StaticResource MutedText}" />
-                                        <TextBlock x:Name="CodexSecondaryValue" Text="—" Style="{StaticResource QuotaValue}"
-                                                   HorizontalAlignment="Right" />
-                                    </Grid>
-                                    <ProgressBar x:Name="CodexSecondaryBar" Style="{StaticResource GlassProgress}" Margin="0,5,0,4" />
-                                    <TextBlock x:Name="CodexSecondaryReset" Text="等待刷新" Style="{StaticResource MutedText}" />
-                                </StackPanel>
-                            </Grid>
-
-                            <TextBlock x:Name="CodexErrorText" Grid.Row="1" Visibility="Collapsed" TextWrapping="Wrap"
-                                       Foreground="#FFFF8E9A" FontSize="11" Margin="0,7,0,0" />
-                            <TextBlock x:Name="CodexExtraText" Grid.Row="2" Visibility="Collapsed"
-                                       Style="{StaticResource MutedText}" Margin="0,6,0,0" TextWrapping="Wrap" />
-                        </Grid>
-                    </Border>
-
                     <Border Style="{StaticResource ProviderCard}">
                         <Grid>
                             <Grid.RowDefinitions>
@@ -295,10 +234,71 @@
                                        Style="{StaticResource MutedText}" Margin="0,6,0,0" TextWrapping="Wrap" />
                         </Grid>
                     </Border>
+
+                    <Border Style="{StaticResource ProviderCard}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="34" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="28" Height="28" CornerRadius="9" Background="#2FE8ECFF" Margin="0,0,9,0">
+                                    <TextBlock Text="C" FontSize="13" FontWeight="SemiBold" Foreground="#F0F4FF"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Codex" FontSize="14" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="CodexPlanText" Text="正在连接" Style="{StaticResource MutedText}" />
+                                </StackPanel>
+                                <Ellipse x:Name="CodexStatusDot" Grid.Column="2" Width="7" Height="7"
+                                         Fill="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+                            </Grid>
+
+                            <Grid x:Name="CodexContentPanel" Grid.Row="1" Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="18" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel>
+                                    <Grid>
+                                        <TextBlock x:Name="CodexPrimaryName" Text="5 小时" Style="{StaticResource MutedText}" />
+                                        <TextBlock x:Name="CodexPrimaryValue" Text="—" Style="{StaticResource QuotaValue}"
+                                                   HorizontalAlignment="Right" />
+                                    </Grid>
+                                    <ProgressBar x:Name="CodexPrimaryBar" Style="{StaticResource GlassProgress}" Margin="0,5,0,4" />
+                                    <TextBlock x:Name="CodexPrimaryReset" Text="等待刷新" Style="{StaticResource MutedText}" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <Grid>
+                                        <TextBlock x:Name="CodexSecondaryName" Text="7 天" Style="{StaticResource MutedText}" />
+                                        <TextBlock x:Name="CodexSecondaryValue" Text="—" Style="{StaticResource QuotaValue}"
+                                                   HorizontalAlignment="Right" />
+                                    </Grid>
+                                    <ProgressBar x:Name="CodexSecondaryBar" Style="{StaticResource GlassProgress}" Margin="0,5,0,4" />
+                                    <TextBlock x:Name="CodexSecondaryReset" Text="等待刷新" Style="{StaticResource MutedText}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock x:Name="CodexErrorText" Grid.Row="1" Visibility="Collapsed" TextWrapping="Wrap"
+                                       Foreground="#FFFF8E9A" FontSize="11" Margin="0,7,0,0" />
+                            <TextBlock x:Name="CodexExtraText" Grid.Row="2" Visibility="Collapsed"
+                                       Style="{StaticResource MutedText}" Margin="0,6,0,0" TextWrapping="Wrap" />
+                        </Grid>
+                    </Border>
                 </StackPanel>
 
                 <Grid Grid.Row="2">
-                    <TextBlock Text="Codex 60秒 · Claude 3分钟" Style="{StaticResource MutedText}" VerticalAlignment="Center" />
+                    <TextBlock Text="Claude 3分钟 · Codex 60秒" Style="{StaticResource MutedText}" VerticalAlignment="Center" />
                     <TextBlock x:Name="DragHintText" Text="拖到屏幕边缘可贴边" Style="{StaticResource MutedText}"
                                HorizontalAlignment="Right" VerticalAlignment="Center" />
                     <CheckBox x:Name="StartWithWindowsCheckBox" Visibility="Collapsed"

@@ -36,6 +36,15 @@ public sealed record ProviderQuota(
     public IReadOnlyList<QuotaWindow> ModelScopedWindows =>
         Windows.Where(window => window.IsModelScoped).ToList();
 
+    /// <summary>When these numbers were fetched; null means at the snapshot's own time.</summary>
+    public DateTimeOffset? UpdatedAt { get; init; }
+
+    /// <summary>Set while the last good numbers are kept during a 429 backoff; says when it retries.</summary>
+    public string? StaleNote { get; init; }
+
+    /// <summary>True while the macOS keychain authorisation prompt is still open.</summary>
+    public bool IsWaiting { get; init; }
+
     public static ProviderQuota Failed(string provider, string error) =>
         new(provider, string.Empty, Array.Empty<QuotaWindow>(), null, error);
 }
@@ -51,6 +60,10 @@ public sealed class AppSettings
     public bool StartWithWindows { get; set; }
     public bool AlwaysOnTop { get; set; }
     public bool LowQuotaNotificationsEnabled { get; set; } = true;
+
+    /// <summary>Write a sanitised quota.json after every refresh (see QuotaSnapshotExport). Off by default.</summary>
+    public bool ExportQuotaSnapshot { get; set; }
+
     public double WidgetOpacity { get; set; } = 0.74;
     public double? WindowLeft { get; set; }
     public double? WindowTop { get; set; }

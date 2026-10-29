@@ -18,11 +18,13 @@ public partial class PanelView : UserControl
 
     private bool _launchAtLogin;
     private bool _alerts;
+    private bool _export;
 
     public event EventHandler? RefreshRequested;
     public event EventHandler? CloseRequested;
     public event EventHandler? LaunchAtLoginToggled;
     public event EventHandler? AlertsToggled;
+    public event EventHandler? ExportToggled;
     public event EventHandler? ScreenOffRequested;
     public event EventHandler? QuitRequested;
 
@@ -35,16 +37,19 @@ public partial class PanelView : UserControl
         WireGadget(QuitButton, () => QuitRequested?.Invoke(this, EventArgs.Empty));
         WireToggle(LaunchAtLoginToggle, () => _launchAtLogin, () => LaunchAtLoginToggled?.Invoke(this, EventArgs.Empty));
         WireToggle(AlertsToggle, () => _alerts, () => AlertsToggled?.Invoke(this, EventArgs.Empty));
-        SetOptions(launchAtLogin: false, alerts: false);
+        WireToggle(ExportToggle, () => _export, () => ExportToggled?.Invoke(this, EventArgs.Empty));
+        SetOptions(launchAtLogin: false, alerts: false, export: false);
     }
 
-    /// <summary>Shows the current settings on the two toggle pills.</summary>
-    public void SetOptions(bool launchAtLogin, bool alerts)
+    /// <summary>Shows the current settings on the three toggle pills.</summary>
+    public void SetOptions(bool launchAtLogin, bool alerts, bool export)
     {
         _launchAtLogin = launchAtLogin;
         _alerts = alerts;
+        _export = export;
         StyleToggle(LaunchAtLoginToggle, LaunchAtLoginText, "登录时启动", launchAtLogin);
         StyleToggle(AlertsToggle, AlertsText, "低额度提醒", alerts);
+        StyleToggle(ExportToggle, ExportText, "导出快照", export);
     }
 
     private static void StyleToggle(Border pill, TextBlock text, string label, bool on)

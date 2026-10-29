@@ -318,7 +318,8 @@ internal static class CredentialReader
         {
             cancellationToken.ThrowIfCancellationRequested();
             throw new QuotaException(
-                $"正在等待钥匙串授权：请在弹出的对话框中允许 Quota Lens 读取“{service}”。");
+                $"正在等待钥匙串授权：请在弹出的对话框中允许 Quota Lens 读取“{service}”。",
+                waiting: true);
         }
 
         lock (KeychainGate)
@@ -412,23 +413,35 @@ internal static class CredentialReader
             return File.Exists(Path.Combine(macCandidate, "config.json")) ? macCandidate : null;
         }
 
-        var roamingCandidate = Path.Combine(
+        return FindWindowsClaudeDesktopDataDirectory(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Claude");
-        if (File.Exists(Path.Combine(roamingCandidate, "config.json"))) return roamingCandidate;
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
+    }
 
-        var packages = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Packages");
-        if (!Directory.Exists(packages)) return null;
+    /// <summary>
+    /// Claude Desktop on Windows has kept its data in three places: <c>%APPDATA%\Claude</c> (classic installer),
+    /// the MSIX container's <c>LocalCache\Roaming\Claude</c>, and since October 2026
+    /// <c>%LOCALAPPDATA%\Claude-Data\&lt;package&gt;</c> (the MSIX folder then only keeps a
+    /// <c>.user-data-left</c> marker). When several hold a <c>config.json</c>, the one written last is live.
+    /// </summary>
+    internal static string? FindWindowsClaudeDesktopDataDirectory(string roamingAppData, string localAppData)
+    {
+        var candidates = new List<string> { Path.Combine(roamingAppData, "Claude") };
 
-        foreach (var package in Directory.EnumerateDirectories(packages, "Claude_*"))
+        var moved = Path.Combine(localAppData, "Claude-Data");
+        if (Directory.Exists(moved)) candidates.AddRange(Directory.EnumerateDirectories(moved, "claude*"));
+
+        var packages = Path.Combine(localAppData, "Packages");
+        if (Directory.Exists(packages))
         {
-            var candidate = Path.Combine(package, "LocalCache", "Roaming", "Claude");
-            if (File.Exists(Path.Combine(candidate, "config.json"))) return candidate;
+            candidates.AddRange(Directory.EnumerateDirectories(packages, "Claude_*")
+                .Select(package => Path.Combine(package, "LocalCache", "Roaming", "Claude")));
         }
 
-        return null;
+        return candidates
+            .Where(candidate => File.Exists(Path.Combine(candidate, "config.json")))
+            .OrderByDescending(candidate => File.GetLastWriteTimeUtc(Path.Combine(candidate, "config.json")))
+            .FirstOrDefault();
     }
 
     private static byte[] DecryptElectronSafeStorage(byte[] encrypted, byte[] masterKey)
@@ -582,5 +595,8 @@ internal static class CredentialReader
 
 internal sealed class QuotaException : Exception
 {
-    public QuotaException(string message) : base(message) { }
+    public QuotaException(string message, bool waiting = false) : base(message) => IsWaiting = waiting;
+
+    /// <summary>Only the "waiting for keychain approval" case; exported as status <c>waiting</c>.</summary>
+    public bool IsWaiting { get; }
 }

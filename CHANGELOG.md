@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added / 新增
+
+- "Export quota snapshot" (tray menu on Windows, panel on macOS; off by default): after every refresh the app atomically writes a sanitised `quota.json` (Agent Farm's snapshot format: percentages, reset times in epoch milliseconds, plan, status, short error text and low-quota alerts; never a token, account id, e-mail or response body) to `%APPDATA%\QuotaLens\` or `~/Library/Application Support/QuotaLens/`, so other local tools can show the numbers; turning it off deletes the file / “导出额度快照”（Windows 在托盘菜单，macOS 在面板里；默认关闭）：每次刷新后原子写入一份脱敏的 `quota.json`（Agent Farm 的快照格式：百分比、毫秒时间戳的重置时间、方案、状态、简短错误文字和低额度提醒，绝不含 token、账户 ID、邮箱或响应正文），位置为 `%APPDATA%\QuotaLens\` 或 `~/Library/Application Support/QuotaLens/`，供本机其他工具显示额度；关闭时删除该文件
+
+### Changed / 变更
+
+- Windows: Claude is listed first everywhere (sidebar strip, panel cards, tray tooltip, low-quota alerts), with Codex below it; the footer reads "Claude 3分钟 · Codex 60秒". macOS is unchanged / Windows：Claude 在所有地方都排在前面（贴边竖条、面板卡片、托盘提示、低额度提醒），Codex 在它下面；底部写“Claude 3分钟 · Codex 60秒”。macOS 不变
+
+### Fixed / 修复
+
+- Windows: Claude Desktop from the Microsoft Store moved its data out of the MSIX container to `%LOCALAPPDATA%\Claude-Data\<package>` in October 2026, leaving only a `.user-data-left` marker behind, so a desktop-only sign-in showed "no Claude Code sign-in found". That folder is now searched too, and when several data folders hold a `config.json`, the one written last is used / Windows：微软商店版 Claude 桌面版在 2026 年 10 月把数据从 MSIX 容器搬到了 `%LOCALAPPDATA%\Claude-Data\<包名>`，原目录只剩一个 `.user-data-left` 标记，只登录了桌面版时会提示“尚未找到 Claude Code 登录信息”。现在也会查找这个目录；有多个数据目录都含 `config.json` 时，取最后写入的那个
+
 ### Planned / 计划
 
 - In-app language switching / 应用内语言切换

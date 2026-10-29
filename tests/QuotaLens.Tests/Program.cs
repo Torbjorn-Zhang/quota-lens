@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using QuotaLens;
 using QuotaLens.Services;
@@ -551,6 +552,193 @@ Run("Settings default to a right-docked sidebar", () =>
             new JsonSerializerOptions { WriteIndented = true }));
 });
 
+Run("Short window labels follow the legend", () =>
+{
+    Equal("5H", QuotaWindowLegend.ShortLabel(new QuotaWindow("5 小时", 10, null)));
+    Equal("7D", QuotaWindowLegend.ShortLabel(new QuotaWindow("7 天", 10, null)));
+    Equal("FABLE", QuotaWindowLegend.ShortLabel(new QuotaWindow("Fable 周额度", 10, null, IsModelScoped: true)));
+    Equal("OPUS4.", QuotaWindowLegend.ShortLabel(new QuotaWindow("Opus 4.1 周额度", 10, null, IsModelScoped: true)));
+    Equal("WEEK", QuotaWindowLegend.ShortLabel(new QuotaWindow("周额度", 10, null, IsModelScoped: true)));
+    Equal("3D", QuotaWindowLegend.ShortLabel(new QuotaWindow("3 天", 10, null)));
+    Equal("12H", QuotaWindowLegend.ShortLabel(new QuotaWindow("12 小时", 10, null)));
+    Equal("WIN", QuotaWindowLegend.ShortLabel(new QuotaWindow("月度", 10, null)));
+});
+
+Run("Quota snapshot export has the Agent Farm shape and nothing else", () =>
+{
+    var snapshot = ExportSample();
+    var fetchedMs = snapshot.FetchedAt.ToUnixTimeMilliseconds();
+    using var json = JsonDocument.Parse(QuotaSnapshotExport.Serialize(snapshot));
+    var root = json.RootElement;
+    Equal("fetchedAt,providers,alerts", Keys(root));
+    Equal(fetchedMs, root.GetProperty("fetchedAt").GetInt64());
+
+    var providers = root.GetProperty("providers").EnumerateArray().ToList();
+    Equal(2, providers.Count);
+    foreach (var provider in providers)
+    {
+        Equal("provider,name,plan,status,error,extra,updatedAt,windows", Keys(provider));
+        foreach (var window in provider.GetProperty("windows").EnumerateArray())
+        {
+            Equal("kind,name,label,usedPercent,remainingPercent,resetsAt", Keys(window));
+        }
+    }
+
+    var claude = providers[0];
+    Equal("claude", claude.GetProperty("provider").GetString());
+    Equal("Claude", claude.GetProperty("name").GetString());
+    Equal("Max 20×", claude.GetProperty("plan").GetString());
+    Equal("ok", claude.GetProperty("status").GetString());
+    Equal(JsonValueKind.Null, claude.GetProperty("error").ValueKind);
+    Equal(fetchedMs - 120_000, claude.GetProperty("updatedAt").GetInt64());
+    var windows = claude.GetProperty("windows").EnumerateArray().ToList();
+    Equal("session,weekly,model", string.Join(",", windows.Select(w => w.GetProperty("kind").GetString())));
+    Equal("5H,7D,FABLE", string.Join(",", windows.Select(w => w.GetProperty("label").GetString())));
+    Equal("5 小时", windows[0].GetProperty("name").GetString());
+    Equal(23, windows[0].GetProperty("usedPercent").GetInt32());
+    Equal(77, windows[0].GetProperty("remainingPercent").GetInt32());
+    Equal(snapshot.Claude.Windows[0].ResetsAt!.Value.ToUnixTimeMilliseconds(), windows[0].GetProperty("resetsAt").GetInt64());
+    Equal(18, windows[2].GetProperty("remainingPercent").GetInt32());
+
+    var codex = providers[1];
+    Equal("codex", codex.GetProperty("provider").GetString());
+    Equal(fetchedMs, codex.GetProperty("updatedAt").GetInt64());
+    Equal("附加 credits：9.99", codex.GetProperty("extra").GetString());
+    Equal(2, codex.GetProperty("windows").GetArrayLength());
+
+    var alerts = root.GetProperty("alerts").EnumerateArray().ToList();
+    Equal(1, alerts.Count);
+    Equal("provider,name,remainingPercent,resetsAt", Keys(alerts[0]));
+    Equal("Fable 周额度", alerts[0].GetProperty("name").GetString());
+});
+
+Run("Quota snapshot export maps stale, waiting and error states", () =>
+{
+    var sample = ExportSample();
+    const string note = "Claude 查询暂时限流，保留上次数据 · 约10分钟后重试";
+    var degraded = sample with
+    {
+        Claude = sample.Claude with { ExtraInfo = sample.Claude.ExtraInfo + " · " + note, StaleNote = note },
+        Codex = ProviderQuota.Failed("Codex", "Codex 登录已过期，请在客户端中重新登录。")
+    };
+    using var json = JsonDocument.Parse(QuotaSnapshotExport.Serialize(degraded));
+    var providers = json.RootElement.GetProperty("providers");
+    Equal("stale", providers[0].GetProperty("status").GetString());
+    Equal(note, providers[0].GetProperty("error").GetString());
+    Equal(sample.Claude.ExtraInfo, providers[0].GetProperty("extra").GetString());
+    Equal(3, providers[0].GetProperty("windows").GetArrayLength());
+    Equal("error", providers[1].GetProperty("status").GetString());
+    Equal(0, providers[1].GetProperty("windows").GetArrayLength());
+    Equal("", providers[1].GetProperty("plan").GetString());
+
+    var waiting = sample with
+    {
+        Claude = ProviderQuota.Failed("Claude Code", "正在等待钥匙串授权：请在弹出的对话框中允许 Quota Lens 读取“Claude Code-credentials”。")
+            with { IsWaiting = true }
+    };
+    using var waitingJson = JsonDocument.Parse(QuotaSnapshotExport.Serialize(waiting));
+    Equal("waiting", waitingJson.RootElement.GetProperty("providers")[0].GetProperty("status").GetString());
+    Contains("Claude Code-credentials", waitingJson.RootElement.GetProperty("providers")[0].GetProperty("error").GetString());
+    Equal(0, waitingJson.RootElement.GetProperty("alerts").GetArrayLength());
+});
+
+Run("Quota snapshot export scrubs secrets out of error text", () =>
+{
+    var sample = ExportSample();
+    var leaky = sample with
+    {
+        Codex = ProviderQuota.Failed(
+            "Codex",
+            @"读取 Codex 额度失败：Could not find file 'C:\Users\Torbjorn\.codex\auth.json' (alice@example.com, " +
+            "Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.c2lnbmF0dXJl, account 8f14e45f-ceea-467a-9575-0f2d3b8a1c3e, " +
+            "/Users/torbjorn/Library/Application Support/x)"),
+        Claude = sample.Claude with { ExtraInfo = "额外用量 12 / 100" }
+    };
+    var text = Encoding.UTF8.GetString(QuotaSnapshotExport.Serialize(leaky));
+    foreach (var secret in new[] { "Torbjorn", "torbjorn", "auth.json", "alice", "example.com", "eyJ", "8f14e45f", "Library" })
+    {
+        if (text.Contains(secret, StringComparison.Ordinal)) throw new Exception($"'{secret}' leaked: {text}");
+    }
+    Contains("读取 Codex 额度失败", text);
+    Contains("额外用量 12 / 100", text);
+    Equal(120, QuotaSnapshotExport.Scrub(new string('长', 300))!.Length);
+    Equal(null, QuotaSnapshotExport.Scrub("  "));
+});
+
+Run("Quota snapshot export writes atomically and is removed when turned off", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "quota-lens-export-" + Guid.NewGuid().ToString("N"));
+    var path = Path.Combine(directory, "nested", "quota.json");
+    try
+    {
+        var log = new List<string>();
+        var export = new QuotaSnapshotExport(path, log.Add);
+        export.Write(ExportSample());
+        export.Write(ExportSample());   // replaces the existing file
+        Equal(1, log.Count);            // logged once, not on every refresh
+        Equal(true, File.Exists(path));
+        Equal(false, File.Exists(path + ".tmp"));
+        Equal(Encoding.UTF8.GetString(QuotaSnapshotExport.Serialize(ExportSample())), File.ReadAllText(path));
+        export.Delete();
+        Equal(false, File.Exists(path));
+    }
+    finally
+    {
+        if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+    }
+});
+
+Run("Claude Desktop data directory on Windows follows the 2026-10 move to Claude-Data", () =>
+{
+    var root = Path.Combine(Path.GetTempPath(), "quota-lens-desktop-" + Guid.NewGuid().ToString("N"));
+    var roaming = Path.Combine(root, "Roaming");
+    var local = Path.Combine(root, "Local");
+    try
+    {
+        Equal(null, CredentialReader.FindWindowsClaudeDesktopDataDirectory(roaming, local));
+
+        // The Store build moved out of its MSIX container and left only a marker behind.
+        var container = Path.Combine(local, "Packages", "Claude_pzs8sxrjxfjjc", "LocalCache", "Roaming", "Claude");
+        Directory.CreateDirectory(container);
+        File.WriteAllText(Path.Combine(container, ".user-data-left.claude_pzs8sxrjxfjjc"), "");
+        Equal(null, CredentialReader.FindWindowsClaudeDesktopDataDirectory(roaming, local));
+        var moved = Path.Combine(local, "Claude-Data", "claude_pzs8sxrjxfjjc");
+        Directory.CreateDirectory(moved);
+        File.WriteAllText(Path.Combine(moved, "README.txt"), "");
+        File.WriteAllText(Path.Combine(moved, "config.json"), "{}");
+        Equal(moved, CredentialReader.FindWindowsClaudeDesktopDataDirectory(roaming, local));
+
+        // A classic install left behind: the config.json written last is the live one.
+        var classic = Path.Combine(roaming, "Claude");
+        Directory.CreateDirectory(classic);
+        File.WriteAllText(Path.Combine(classic, "config.json"), "{}");
+        File.SetLastWriteTimeUtc(Path.Combine(classic, "config.json"), DateTime.UtcNow.AddDays(-30));
+        Equal(moved, CredentialReader.FindWindowsClaudeDesktopDataDirectory(roaming, local));
+        File.SetLastWriteTimeUtc(Path.Combine(classic, "config.json"), DateTime.UtcNow.AddMinutes(5));
+        Equal(classic, CredentialReader.FindWindowsClaudeDesktopDataDirectory(roaming, local));
+    }
+    finally
+    {
+        if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+    }
+});
+
+var sampleIndex = Array.IndexOf(args, "--write-export-sample");
+if (sampleIndex >= 0 && sampleIndex + 1 < args.Length)
+{
+    // Fixtures for pc-remote-power's pytest (pcremote.quota.sanitize must accept what we write).
+    var sample = ExportSample();
+    var degraded = sample with
+    {
+        Claude = sample.Claude with { StaleNote = "Claude 查询暂时限流，保留上次数据 · 约10分钟后重试" },
+        Codex = ProviderQuota.Failed("Codex", "无法连接 Codex，请检查网络或代理设置。")
+    };
+    Directory.CreateDirectory(args[sampleIndex + 1]);
+    new QuotaSnapshotExport(Path.Combine(args[sampleIndex + 1], "quota_lens_export.json"), _ => { }).Write(sample);
+    new QuotaSnapshotExport(Path.Combine(args[sampleIndex + 1], "quota_lens_export_degraded.json"), _ => { }).Write(degraded);
+    Console.WriteLine($"SAMPLE written to {args[sampleIndex + 1]}");
+}
+
 if (args.Contains("--live", StringComparer.OrdinalIgnoreCase))
 {
     await RunLiveAsync();
@@ -643,6 +831,27 @@ static void PrintProvider(ProviderQuota quota)
         $"{window.Name} remaining {window.RemainingPercent:0}%"));
     Console.WriteLine($"LIVE {quota.Provider} [{quota.Plan}]: {windows}");
 }
+
+// Fixed times so the exported sample is reproducible.
+static QuotaSnapshot ExportSample()
+{
+    var now = DateTimeOffset.FromUnixTimeMilliseconds(1_792_576_800_000);
+    var claude = new ProviderQuota("Claude Code", "Max 20×", new[]
+    {
+        new QuotaWindow("5 小时", 23, now.AddHours(2.2)),
+        new QuotaWindow("7 天", 27, now.AddHours(82)),
+        new QuotaWindow("Fable 周额度", 82, now.AddHours(82), IsModelScoped: true)
+    }, "Sonnet 周额度剩 90%") { UpdatedAt = now.AddMinutes(-2) };
+    var codex = new ProviderQuota("Codex", "pro", new[]
+    {
+        new QuotaWindow("5 小时", 37, now.AddHours(4)),
+        new QuotaWindow("7 天", 62, now.AddDays(5))
+    }, "附加 credits：9.99");
+    return new QuotaSnapshot(codex, claude, now);
+}
+
+static string Keys(JsonElement element) =>
+    string.Join(",", element.EnumerateObject().Select(property => property.Name));
 
 static void Equal<T>(T expected, T actual)
 {
