@@ -86,7 +86,8 @@ public sealed class QuotaService : IDisposable
             using var json = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
             var quota = ParseClaude(json.RootElement) with
             {
-                Plan = FormatClaudePlan(credential.SubscriptionType, credential.RateLimitTier)
+                Plan = FormatClaudePlan(credential.SubscriptionType, credential.RateLimitTier),
+                UpdatedAt = now
             };
             _lastClaudeQuota = quota;
             _nextClaudeFetch = now + ClaudeRefreshInterval;
@@ -107,7 +108,8 @@ public sealed class QuotaService : IDisposable
             {
                 return _lastClaudeQuota with
                 {
-                    ExtraInfo = JoinExtraInfo(_lastClaudeQuota.ExtraInfo, status)
+                    ExtraInfo = JoinExtraInfo(_lastClaudeQuota.ExtraInfo, status),
+                    StaleNote = status
                 };
             }
 
@@ -115,7 +117,10 @@ public sealed class QuotaService : IDisposable
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return ProviderQuota.Failed("Claude Code", FriendlyError(ex, "Claude Code"));
+            return ProviderQuota.Failed("Claude Code", FriendlyError(ex, "Claude Code")) with
+            {
+                IsWaiting = ex is QuotaException { IsWaiting: true }
+            };
         }
     }
 

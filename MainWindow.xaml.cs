@@ -22,6 +22,7 @@ public partial class MainWindow : Window
 {
     private readonly QuotaService _quotaService = new();
     private readonly SettingsService _settingsService = new();
+    private readonly QuotaSnapshotExport _snapshotExport = new();
     private readonly DispatcherTimer _refreshTimer = new();
     private readonly DispatcherTimer _countdownTimer = new();
     private readonly HashSet<string> _warningKeys = new(StringComparer.Ordinal);
@@ -31,6 +32,7 @@ public partial class MainWindow : Window
     private Forms.ToolStripMenuItem? _pinMenuItem;
     private Forms.ToolStripMenuItem? _autoStartMenuItem;
     private Forms.ToolStripMenuItem? _lowQuotaNotificationsMenuItem;
+    private Forms.ToolStripMenuItem? _exportSnapshotMenuItem;
     private readonly List<Forms.ToolStripMenuItem> _opacityMenuItems = new();
     private readonly List<ScopedQuotaRow> _claudeScopedRows = new();
     private QuotaSnapshot? _snapshot;
@@ -133,6 +135,14 @@ public partial class MainWindow : Window
         _lowQuotaNotificationsMenuItem.Click += (_, _) => Dispatcher.Invoke(() =>
             SetLowQuotaNotifications(!_settings.LowQuotaNotificationsEnabled));
         menu.Items.Add(_lowQuotaNotificationsMenuItem);
+
+        _exportSnapshotMenuItem = new Forms.ToolStripMenuItem("导出额度快照")
+        {
+            Checked = _settings.ExportQuotaSnapshot
+        };
+        _exportSnapshotMenuItem.Click += (_, _) => Dispatcher.Invoke(() =>
+            SetQuotaSnapshotExport(!_settings.ExportQuotaSnapshot));
+        menu.Items.Add(_exportSnapshotMenuItem);
 
         _autoStartMenuItem = new Forms.ToolStripMenuItem("开机启动")
         {
@@ -251,7 +261,8 @@ public partial class MainWindow : Window
 
             UpdatedText.Text = $"更新 {_snapshot.FetchedAt:HH:mm:ss} · {_settings.PollSeconds}s";
             UpdateTrayText();
-            NotifyLowQuota(_snapshot.Codex, _snapshot.Claude);
+            NotifyLowQuota(_snapshot.Claude, _snapshot.Codex);
+            if (_settings.ExportQuotaSnapshot) _snapshotExport.Write(_snapshot);
         }
         catch (OperationCanceledException)
         {
@@ -433,7 +444,7 @@ public partial class MainWindow : Window
         if (_trayIcon is null || _snapshot is null) return;
         var codex = PrimaryRemaining(_snapshot.Codex);
         var claude = PrimaryRemaining(_snapshot.Claude);
-        var text = $"Quota Lens · Codex {codex} · Claude {claude}";
+        var text = $"Quota Lens · Claude {claude} · Codex {codex}";
         _trayIcon.Text = text.Length <= 63 ? text : text[..63];
     }
 
@@ -467,6 +478,19 @@ public partial class MainWindow : Window
             _lowQuotaNotificationsMenuItem.Checked = enabled;
         }
         _settingsService.Save(_settings);
+    }
+
+    private void SetQuotaSnapshotExport(bool enabled)
+    {
+        _settings.ExportQuotaSnapshot = enabled;
+        if (_exportSnapshotMenuItem is not null)
+        {
+            _exportSnapshotMenuItem.Checked = enabled;
+        }
+        _settingsService.Save(_settings);
+
+        if (!enabled) _snapshotExport.Delete();
+        else if (_snapshot is not null) _snapshotExport.Write(_snapshot);
     }
 
     private static string PrimaryRemaining(ProviderQuota quota) =>

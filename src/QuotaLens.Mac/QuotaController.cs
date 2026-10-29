@@ -19,6 +19,7 @@ internal sealed class QuotaController : IDisposable
     private readonly Application _app;
     private readonly IClassicDesktopStyleApplicationLifetime _desktop;
     private readonly QuotaService _quotaService = new();
+    private readonly QuotaSnapshotExport _snapshotExport = new();
     private readonly DispatcherTimer _refreshTimer = new();
     private readonly HashSet<string> _warningKeys = new(StringComparer.Ordinal);
     private readonly string _settingsPath = Path.Combine(AppPaths.DataDirectory, "settings.json");
@@ -65,6 +66,14 @@ internal sealed class QuotaController : IDisposable
             SaveSettings();
             SyncPanelOptions();
         };
+        view.ExportToggled += (_, _) =>
+        {
+            _settings.ExportQuotaSnapshot = !_settings.ExportQuotaSnapshot;
+            SaveSettings();
+            SyncPanelOptions();
+            if (!_settings.ExportQuotaSnapshot) _snapshotExport.Delete();
+            else if (_snapshot is not null) _snapshotExport.Write(_snapshot);
+        };
         SyncPanelOptions();
         _outsideClickTimer.Tick += (_, _) => HidePanelOnOutsideClick();
     }
@@ -108,6 +117,7 @@ internal sealed class QuotaController : IDisposable
             _panel.Panel.Render(_snapshot);
             NotifyLowQuota(_snapshot);
             LogStateChange(_snapshot);
+            if (_settings.ExportQuotaSnapshot) _snapshotExport.Write(_snapshot);
         }
         catch (OperationCanceledException)
         {
@@ -289,7 +299,10 @@ internal sealed class QuotaController : IDisposable
     }
 
     private void SyncPanelOptions() =>
-        _panel.Panel.SetOptions(_settings.StartWithWindows, _settings.LowQuotaNotificationsEnabled);
+        _panel.Panel.SetOptions(
+            _settings.StartWithWindows,
+            _settings.LowQuotaNotificationsEnabled,
+            _settings.ExportQuotaSnapshot);
 
     private void NotifyLowQuota(QuotaSnapshot snapshot)
     {

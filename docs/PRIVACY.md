@@ -23,6 +23,8 @@
 
 macOS 版的设置和日志位于 `~/Library/Application Support/QuotaLens/`（`settings.json` 只保存刷新间隔、登录时启动与低额度提醒状态）。日志另外在额度可用状态变化时记一行，只含“成功/失败”和界面上显示的友好错误文字。启用“登录时启动”时，程序写入 `~/Library/LaunchAgents/io.github.torbjorn-zhang.quotalens.plist`，其中只保存应用路径。
 
+“导出额度快照”默认关闭。打开后，每次刷新都会原子写入一份脱敏快照，供本机其他工具读取（例如把额度推送到树莓派小屏的脚本）：Windows 为 `%APPDATA%\QuotaLens\quota.json`，macOS 为 `~/Library/Application Support/QuotaLens/quota.json`（权限 600）。文件只含服务名、方案、状态、各额度窗口的使用/剩余百分比与重置时间、credits 信息、低额度提醒，以及界面上显示的友好错误文字；错误文字写入前会再去掉看起来像凭据、邮箱或文件路径的内容。关闭该选项时文件会被删除。Quota Lens 本身不会把这个文件发往任何地方。
+
 OAuth token、额度响应正文和账户 ID 不会写入 Quota Lens 的文件或日志。解密后的 Claude Desktop token 与主密钥只存在于进程内存中，使用结束后相关字节缓冲区会被清零。macOS 上由钥匙串密码派生的解密密钥会在进程内存中保留到退出，以免每次刷新都重新请求钥匙串授权；钥匙串密码本身用完即清零。
 
 ## 删除数据

@@ -96,6 +96,35 @@ internal static class QuotaWindowLegend
     }
 
     /// <summary>
+    /// Short ASCII label for pixel fonts and small screens: "5H", "7D", the model family ("FABLE",
+    /// at most six characters, else "WEEK"), or for other windows the length ("3D", "30M") or their
+    /// first ASCII letters ("WIN" when there are none). Same rule as Agent Farm's quota port.
+    /// </summary>
+    internal static string ShortLabel(QuotaWindow window)
+    {
+        switch (Classify(window))
+        {
+            case QuotaWindowKind.Session:
+                return "5H";
+            case QuotaWindowKind.Weekly:
+                return "7D";
+            case QuotaWindowKind.Model:
+                var family = AsciiUpper(window.Name.Replace(QuotaService.WeeklyScopedSuffix, string.Empty), keepDot: true);
+                return family.Length == 0 ? "WEEK" : family[..Math.Min(6, family.Length)];
+        }
+
+        var number = new string(window.Name.TakeWhile(c => c is >= '0' and <= '9').ToArray());
+        var unit = window.Name.Contains("小时") ? "H" : window.Name.Contains('天') ? "D" : window.Name.Contains('分') ? "M" : "";
+        if (number.Length > 0 && unit.Length > 0) return number + unit;
+        var letters = AsciiUpper(window.Name, keepDot: false);
+        return letters.Length == 0 ? "WIN" : letters[..Math.Min(5, letters.Length)];
+    }
+
+    private static string AsciiUpper(string text, bool keepDot) =>
+        new string(text.Where(c => c is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9'
+                                   || (keepDot && c == '.')).ToArray()).ToUpperInvariant();
+
+    /// <summary>
     /// Reset time in at most five characters of local time: the clock time ("14:30") when the reset
     /// is less than 24 hours away, otherwise the date ("10/3"). "重置中" once the reset has passed
     /// and "—" when the provider did not report one.

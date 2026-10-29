@@ -66,7 +66,15 @@
                 </Border>
             </Grid>
 
-            <TextBlock Text="Codex 60 秒 · Claude 3 分钟 · 点击别处收起" FontSize="10.5" Foreground="#7F93AE" />
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="Codex 60 秒 · Claude 3 分钟 · 点击别处收起" FontSize="10.5" Foreground="#7F93AE"
+                           VerticalAlignment="Center" />
+                <Border x:Name="ExportToggle" Grid.Column="1" Margin="6,0,0,0" CornerRadius="9" Padding="9,4"
+                        BorderThickness="1" Cursor="Hand"
+                        ToolTip.Tip="每次刷新后写入 ~/Library/Application Support/QuotaLens/quota.json，只有百分比、重置时间、方案和状态，供其他工具读取">
+                    <TextBlock x:Name="ExportText" Text="导出快照" FontSize="11" />
+                </Border>
+            </Grid>
         </StackPanel>
     </Border>
 </UserControl>

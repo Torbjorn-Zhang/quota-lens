@@ -23,6 +23,8 @@ English | [简体中文](PRIVACY.md)
 
 On macOS, settings and the log live in `~/Library/Application Support/QuotaLens/` (`settings.json` holds only the refresh interval, launch at login, and low-quota alert state). The log additionally records a line whenever quota availability changes, containing only success or failure and the friendly error text shown in the UI. When launch at login is on, the app writes `~/Library/LaunchAgents/io.github.torbjorn-zhang.quotalens.plist`, which holds only the app path.
 
+"Export quota snapshot" is off by default. When it is on, every refresh atomically writes a sanitised snapshot for other local tools to read (for example a script that pushes the numbers to a Raspberry Pi screen): `%APPDATA%\QuotaLens\quota.json` on Windows and `~/Library/Application Support/QuotaLens/quota.json` on macOS (mode 600). It holds only the service names, plan, status, each window's used and remaining percentage and reset time, the credits line, low-quota alerts, and the friendly error text shown in the UI; anything in that text that looks like a credential, e-mail address or file path is removed first. Turning the option off deletes the file. Quota Lens itself never sends this file anywhere.
+
 OAuth tokens, raw usage responses, and account IDs are never written to Quota Lens files or logs. Decrypted Claude Desktop tokens and master keys exist only in process memory, and their byte buffers are zeroed after use. On macOS the decryption key derived from the keychain password stays in process memory until exit so that refreshes do not ask for keychain access again; the keychain password itself is zeroed right after use.
 
 ## Removing data
